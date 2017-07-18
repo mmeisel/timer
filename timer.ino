@@ -21,14 +21,19 @@
 // Allowable positions where the motor will create virtual detentes.
 // The first position will always be the zero position (where the alarm will sound).
 // Position zero is reserved for "off", so the first position should be at least 2 * FUDGE_FACTOR.
-const int STOPS[] = {
+const double STOPS[] = {
     32, 96, 160, 224, 288, 352, 416, 480, 544, 608, 672, 736, 800, 864, 928, 992
 };
 
-const int NUM_STOPS = sizeof(STOPS) / sizeof(int);
+const int NUM_STOPS = sizeof(STOPS) / sizeof(double);
 
-int currentPosition;
-int expectedPosition;
+double currentPosition;
+double expectedPosition;
+double pidOutput;
+
+// See http://playground.arduino.cc/Code/PIDLibrary
+// P_ON_M (proportional on measurement) mode is better for linear slide pots
+PID pid(&currentPosition, &pidOutput, &expectedPosition, 2, 5, 1, P_ON_M, DIRECT);
 
 bool isRunning;
 volatile long msRemaining;
@@ -53,17 +58,17 @@ void setDirection(int direction) {
         case DIR_STOP:
             digitalWrite(PIN_DIR1, LOW);
             digitalWrite(PIN_DIR2, LOW);
-            digitalWrite(PIN_OUTPUT, LOW);
+            analogWrite(PIN_OUTPUT, LOW);
             break;
         case DIR_REVERSE:
             digitalWrite(PIN_DIR1, LOW);
             digitalWrite(PIN_DIR2, HIGH);
-            digitalWrite(PIN_OUTPUT, HIGH);
+            analogWrite(PIN_OUTPUT, 10);
             break;
         case DIR_FORWARD:
             digitalWrite(PIN_DIR1, HIGH);
             digitalWrite(PIN_DIR2, LOW);
-            digitalWrite(PIN_OUTPUT, HIGH);
+            analogWrite(PIN_OUTPUT, 10);
             break;
     }
 }
@@ -91,7 +96,7 @@ int whichStop(int position) {
 }
 */
 
-int stopBefore(int position) {
+int stopBefore(double position) {
     if (position < STOPS[0] - FUDGE_FACTOR) {
         return OFF_STOP;
     }
@@ -105,7 +110,7 @@ int stopBefore(int position) {
     return NUM_STOPS - 1;
 }
 
-int nearestStop(int position) {
+int nearestStop(double position) {
     int before = stopBefore(position);
 
     if (before == NUM_STOPS - 1) {
@@ -113,25 +118,25 @@ int nearestStop(int position) {
     }
 
     int after = before + 1;
-    int beforeEnd = (before == OFF_STOP ? 0 : STOPS[before]) + FUDGE_FACTOR;
-    int distance = STOPS[after] - beforeEnd - 2 * FUDGE_FACTOR;
+    double beforeEnd = (before == OFF_STOP ? 0 : STOPS[before]) + FUDGE_FACTOR;
+    double distance = STOPS[after] - beforeEnd - 2 * FUDGE_FACTOR;
 
     return position < beforeEnd + distance / 2 ? before : after;
 }
 
 // Linear with maximum of 30 seconds
-long positionToMs(int position) {
-    int firstPosition = STOPS[0];
-    int lastPosition = STOPS[NUM_STOPS - 1];
+long positionToMs(double position) {
+    double firstPosition = STOPS[0];
+    double lastPosition = STOPS[NUM_STOPS - 1];
 
     return lround(30000.0 * max(0, position - firstPosition) / (lastPosition - firstPosition));
 }
 
-int msToPosition(long ms) {
-    int firstPosition = STOPS[0];
-    int lastPosition = STOPS[NUM_STOPS - 1];
+double msToPosition(long ms) {
+    double firstPosition = STOPS[0];
+    double lastPosition = STOPS[NUM_STOPS - 1];
 
-    return (int) lround(firstPosition + ms * (lastPosition - firstPosition) / 30000.0);
+    return round(firstPosition + ms * (lastPosition - firstPosition) / 30000.0);
 }
 
 
@@ -143,6 +148,8 @@ void setup() {
     pinMode(PIN_BELL, OUTPUT);
 
     digitalWrite(PIN_BELL, LOW);
+
+    pid.SetMode(AUTOMATIC);
 
     currentPosition = analogRead(PIN_ANALOG_IN);
     expectedPosition = nearestStop(currentPosition);    // Don't move the slider on startup
@@ -158,14 +165,16 @@ void setup() {
 void loop() {
     currentPosition = analogRead(PIN_ANALOG_IN);
 
+    /*
     Serial.print("currentPosition = ");
     Serial.print(currentPosition);
     Serial.print(", msRemaining = ");
     Serial.print(msRemaining);
     Serial.print("\n");
+    */
 
     int nearest = nearestStop(currentPosition);
-    int nearestPosition = nearest == OFF_STOP ? 0 : STOPS[nearest];
+    double nearestPosition = nearest == OFF_STOP ? 0 : STOPS[nearest];
     long curMsRemaining;
 
     if (nearestPosition <= STOPS[0]) {
@@ -198,33 +207,34 @@ void loop() {
 
         // Find the new expectedPosition based on ms remaining
         int newNearest = nearestStop(msToPosition(curMsRemaining));
-        int newExpectedPosition = newNearest == 0 ? 0 : STOPS[newNearest];
+        double newExpectedPosition = newNearest == 0 ? 0 : STOPS[newNearest];
 
         // If it changed, move the slider
-        if (expectedPosition == newExpectedPosition) {
-            setDirection(DIR_STOP);
-        }
-        else {
+        if (expectedPosition != newExpectedPosition) {
             Serial.print("newExpectedPosition = ");
             Serial.print(newExpectedPosition);
             Serial.print("\n");
 
-            setDirection(expectedPosition > newExpectedPosition ? DIR_REVERSE : DIR_FORWARD);
+            /*pid.Compute();
+            analogWrite(PIN_OUTPUT, pidOutput);*/
+            //setDirection(expectedPosition > newExpectedPosition ? DIR_REVERSE : DIR_FORWARD);
             expectedPosition = newExpectedPosition;
         }
     }
 
     // If the position is off by more than the fudge factor, create the virtual detentes with the
     // motor.
-    if (currentPosition < expectedPosition - FUDGE_FACTOR) {
-        setDirection(DIR_FORWARD);
+    if (abs(currentPosition - expectedPosition) > FUDGE_FACTOR) {
+        pid.Compute();
+        analogWrite(PIN_OUTPUT, pidOutput);
     }
     else if (currentPosition > expectedPosition + FUDGE_FACTOR) {
-        setDirection(DIR_REVERSE);
+        pid.Compute();
+        analogWrite(PIN_OUTPUT, pidOutput);
     }
     else {
         setDirection(DIR_STOP);
     }
 
-    delay(250);
+    //delay(100);
 }
