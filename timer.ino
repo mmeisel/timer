@@ -1,6 +1,6 @@
 // Pins
 #define PIN_ANALOG_IN A0
-#define PIN_OUTPUT 5
+#define PIN_ENABLE 5
 #define PIN_DIR1 6
 #define PIN_DIR2 7
 #define PIN_BELL LED_BUILTIN
@@ -31,7 +31,7 @@ struct Stop {
 const Stop STOPS[] = {
     Stop(0, OFF),
     Stop(32, 0),
-    Stop(96, 2000),
+    Stop(96,  2000),
     Stop(160, 4000),
     Stop(224, 6000),
     Stop(288, 8000),
@@ -52,26 +52,27 @@ const int NUM_STOPS = sizeof(STOPS) / sizeof(Stop);
 
 int currentPosition;
 int currentStop;
+int nextStop;
 unsigned long deadline;
 
 
 
 void setDirection(int direction) {
     switch (direction) {
-        case DIR_STOP:
-            digitalWrite(PIN_DIR1, LOW);
-            digitalWrite(PIN_DIR2, LOW);
-            digitalWrite(PIN_OUTPUT, LOW);
-            break;
         case DIR_REVERSE:
             digitalWrite(PIN_DIR1, LOW);
             digitalWrite(PIN_DIR2, HIGH);
-            digitalWrite(PIN_OUTPUT, HIGH);
+            digitalWrite(PIN_ENABLE, HIGH);
+            break;
+        case DIR_STOP:
+            digitalWrite(PIN_DIR1, LOW);
+            digitalWrite(PIN_DIR2, LOW);
+            digitalWrite(PIN_ENABLE, LOW);
             break;
         case DIR_FORWARD:
             digitalWrite(PIN_DIR1, HIGH);
             digitalWrite(PIN_DIR2, LOW);
-            digitalWrite(PIN_OUTPUT, HIGH);
+            digitalWrite(PIN_ENABLE, HIGH);
             break;
     }
 }
@@ -109,16 +110,17 @@ int findNearestStop(int position) {
 }
 
 void setup() {
-    pinMode(PIN_OUTPUT, OUTPUT);
+    pinMode(PIN_ENABLE, OUTPUT);
     pinMode(PIN_DIR1, OUTPUT);
     pinMode(PIN_DIR2, OUTPUT);
     pinMode(PIN_BELL, OUTPUT);
 
-    digitalWrite(PIN_BELL, LOW);
-
     currentPosition = analogRead(PIN_ANALOG_IN);
     currentStop = findNearestStop(currentPosition);    // Don't move the slider on startup
+    nextStop = currentStop;
     deadline = millis() + STOPS[currentStop].ms;
+
+    digitalWrite(PIN_BELL, nextStop == 1 ? HIGH : LOW);
 
     Serial.begin(9600);
 }
@@ -130,52 +132,55 @@ void loop() {
     long remaining = (long) (deadline - now);
     bool stopChanged = false;
 
-    // Check if the slider is in the expected position. If not, a human must have moved it.
-    if (currentPosition < STOPS[currentStop].position - FUDGE_FACTOR ||
-        currentPosition > STOPS[min(currentStop + 1, NUM_STOPS - 1)].position + FUDGE_FACTOR)
+    // Check if the slider is in the expected range and is moving in a timely manner.
+    // If not, a human must have moved it, or be holding it in place.
+    if (currentPosition < STOPS[nextStop].position - FUDGE_FACTOR ||
+        currentPosition > STOPS[currentStop].position + FUDGE_FACTOR ||
+        currentStop - nextStop > 1)
     {
         int nearestStop = findNearestStop(currentPosition);
 
         deadline = now + STOPS[nearestStop].ms;
         currentStop = nearestStop;
+        nextStop = nearestStop;
         stopChanged = true;
     }
-    else if (currentStop > 1) {
-        // Normal operation (not off or ringing)
-        if (remaining <= STOPS[currentStop - 1].ms) {
-            // Time to move the slider to the next stop down
-            currentStop--;
-            stopChanged = true;
-        }
+    else if (nextStop > 1 && remaining <= STOPS[nextStop - 1].ms) {
+        // Normal operation (not off or ringing): move the slider down as time passes
+        nextStop--;
+        stopChanged = true;
     }
 
     if (stopChanged) {
-        // Enable or disable the bell based on whether we're at the zero stop (stop 1)
-        digitalWrite(PIN_BELL, currentStop == 1 ? HIGH : LOW);
+        // Enable or disable the bell based on whether we're headed to the zero stop (stop 1)
+        digitalWrite(PIN_BELL, nextStop == 1 ? HIGH : LOW);
     }
 
     if (Serial.available() > 0) {
         Serial.read();  // Doesn't matter what it is, just output state on any input
-        Serial.print("remaining = ");
+        Serial.print(F("remaining = "));
         Serial.print(remaining);
-        Serial.print(", currentStop = ");
+        Serial.print(F(", currentStop = "));
         Serial.print(currentStop);
-        Serial.print(", currentPosition = ");
+        Serial.print(F(", nextStop = "));
+        Serial.print(nextStop);
+        Serial.print(F(", currentPosition = "));
         Serial.print(currentPosition);
-        Serial.print("\n");
+        Serial.print(F("\n"));
     }
 
-    // Ensure the slider is in the desired position
-    int expectedPosition = STOPS[currentStop].position;
+    int desiredPosition = STOPS[nextStop].position;
 
-    // Avoid the boundaries with <= and >=
-    if (currentPosition <= expectedPosition - FUDGE_FACTOR) {
+    // Avoid boundaries with <= and >=
+    if (currentPosition <= desiredPosition - FUDGE_FACTOR) {
         setDirection(DIR_FORWARD);
     }
-    else if (currentPosition >= expectedPosition + FUDGE_FACTOR) {
+    else if (currentPosition >= desiredPosition + FUDGE_FACTOR) {
         setDirection(DIR_REVERSE);
     }
     else {
+        // We've reached the desired position
         setDirection(DIR_STOP);
+        currentStop = nextStop;
     }
 }
