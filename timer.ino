@@ -77,13 +77,21 @@ void setDirection(int direction) {
 }
 
 int stopBefore(int position) {
-    for (int i = 1; i < NUM_STOPS; i++) {
-        if (position < STOPS[i].position - FUDGE_FACTOR) {
-            return i - 1;
+    int lower = 0;
+    int upper = NUM_STOPS;
+
+    while (lower < upper - 1) {
+        int middle = (lower + upper) / 2;
+
+        if (position < STOPS[middle].position) {
+            upper = middle;
+        }
+        else {
+            lower = middle;
         }
     }
 
-    return NUM_STOPS - 1;
+    return lower;
 }
 
 int findNearestStop(int position) {
@@ -94,10 +102,10 @@ int findNearestStop(int position) {
     }
 
     int after = before + 1;
-    int beforeEnd = STOPS[before].position + FUDGE_FACTOR;
-    int distance = STOPS[after].position - beforeEnd - 2 * FUDGE_FACTOR;
+    int beforePosition = STOPS[before].position;
+    int midpoint = (beforePosition + STOPS[after].position) / 2;
 
-    return position < beforeEnd + distance / 2 ? before : after;
+    return position <= midpoint ? before : after;
 }
 
 void setup() {
