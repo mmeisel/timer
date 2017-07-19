@@ -165,9 +165,10 @@ void loop() {
         Serial.print("\n");
     }
 
-    // Keep the slider in the desired position
+    // Ensure the slider is in the desired position
     int expectedPosition = STOPS[currentStop].position;
 
+    // Avoid the boundaries with <= and >=
     if (currentPosition <= expectedPosition - FUDGE_FACTOR) {
         setDirection(DIR_FORWARD);
     }
