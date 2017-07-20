@@ -1,5 +1,5 @@
 // Pins
-#define PIN_ANALOG_IN A0
+#define PIN_SLIDER_IN A0
 #define PIN_ENABLE 5
 #define PIN_DIR1 6
 #define PIN_DIR2 7
@@ -7,15 +7,15 @@
 
 // Directions
 #define DIR_STOP 0
+#define DIR_OFF 255
 #define DIR_REVERSE -1
 #define DIR_FORWARD 1
 
-#define OFF -1
+#define STOP_OFF -1
 
 // Slider properties
 // Slider positions come from analogRead, so the range is 0 to 1023
-#define FUDGE_FACTOR 6
-#define RESET_THRESHOLD_MS 40000
+#define FUDGE_FACTOR 10
 
 // Stops where the motor will create virtual detentes.
 // The first stop should always be the "OFF" position. The second stop should always be the zero
@@ -29,7 +29,7 @@ struct Stop {
 };
 
 const Stop STOPS[] = {
-    Stop(0, OFF),
+    Stop(0, STOP_OFF),
     Stop(32, 0),
     Stop(96,  2000),
     Stop(160, 4000),
@@ -52,12 +52,15 @@ const int NUM_STOPS = sizeof(STOPS) / sizeof(Stop);
 
 int currentPosition;
 int currentStop;
+int currentDirection;
 int nextStop;
 unsigned long deadline;
 
 
 
 void setDirection(int direction) {
+    currentDirection = direction;
+
     switch (direction) {
         case DIR_REVERSE:
             digitalWrite(PIN_DIR1, LOW);
@@ -65,6 +68,11 @@ void setDirection(int direction) {
             digitalWrite(PIN_ENABLE, HIGH);
             break;
         case DIR_STOP:
+            digitalWrite(PIN_DIR1, LOW);
+            digitalWrite(PIN_DIR2, LOW);
+            digitalWrite(PIN_ENABLE, HIGH);
+            break;
+        case DIR_OFF:
             digitalWrite(PIN_DIR1, LOW);
             digitalWrite(PIN_DIR2, LOW);
             digitalWrite(PIN_ENABLE, LOW);
@@ -95,28 +103,14 @@ int stopBefore(int position) {
     return lower;
 }
 
-int findNearestStop(int position) {
-    int before = stopBefore(position);
-
-    if (before == NUM_STOPS - 1) {
-        return NUM_STOPS - 1;
-    }
-
-    int after = before + 1;
-    int beforePosition = STOPS[before].position;
-    int midpoint = (beforePosition + STOPS[after].position) / 2;
-
-    return position <= midpoint ? before : after;
-}
-
 void setup() {
     pinMode(PIN_ENABLE, OUTPUT);
     pinMode(PIN_DIR1, OUTPUT);
     pinMode(PIN_DIR2, OUTPUT);
     pinMode(PIN_BELL, OUTPUT);
 
-    currentPosition = analogRead(PIN_ANALOG_IN);
-    currentStop = findNearestStop(currentPosition);    // Don't move the slider on startup
+    currentPosition = analogRead(PIN_SLIDER_IN);
+    currentStop = stopBefore(currentPosition);    // Don't move the slider on startup
     nextStop = currentStop;
     deadline = millis() + STOPS[currentStop].ms;
 
@@ -126,11 +120,11 @@ void setup() {
 }
 
 void loop() {
-    currentPosition = analogRead(PIN_ANALOG_IN);
-
     unsigned long now = millis();
     long remaining = (long) (deadline - now);
     bool stopChanged = false;
+
+    currentPosition = analogRead(PIN_SLIDER_IN);
 
     // Check if the slider is in the expected range and is moving in a timely manner.
     // If not, a human must have moved it, or be holding it in place.
@@ -138,7 +132,7 @@ void loop() {
         currentPosition > STOPS[currentStop].position + FUDGE_FACTOR ||
         currentStop - nextStop > 1)
     {
-        int nearestStop = findNearestStop(currentPosition);
+        int nearestStop = stopBefore(currentPosition);
 
         deadline = now + STOPS[nearestStop].ms;
         currentStop = nearestStop;
@@ -156,6 +150,21 @@ void loop() {
         digitalWrite(PIN_BELL, nextStop == 1 ? HIGH : LOW);
     }
 
+    int desiredPosition = STOPS[nextStop].position;
+
+    if (currentPosition < desiredPosition - FUDGE_FACTOR) {
+        setDirection(DIR_FORWARD);
+    }
+    else if (currentPosition > desiredPosition + FUDGE_FACTOR) {
+        setDirection(DIR_REVERSE);
+    }
+    else {
+        // We've reached the desired position. When we first get here, actively stop the motor.
+        // After that, we can just turn it off.
+        setDirection(currentDirection == DIR_STOP ? DIR_OFF : DIR_STOP);
+        currentStop = nextStop;
+    }
+
     if (Serial.available() > 0) {
         Serial.read();  // Doesn't matter what it is, just output state on any input
         Serial.print(F("remaining = "));
@@ -167,20 +176,5 @@ void loop() {
         Serial.print(F(", currentPosition = "));
         Serial.print(currentPosition);
         Serial.print(F("\n"));
-    }
-
-    int desiredPosition = STOPS[nextStop].position;
-
-    // Avoid boundaries with <= and >=
-    if (currentPosition <= desiredPosition - FUDGE_FACTOR) {
-        setDirection(DIR_FORWARD);
-    }
-    else if (currentPosition >= desiredPosition + FUDGE_FACTOR) {
-        setDirection(DIR_REVERSE);
-    }
-    else {
-        // We've reached the desired position
-        setDirection(DIR_STOP);
-        currentStop = nextStop;
     }
 }
