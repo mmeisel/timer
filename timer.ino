@@ -1,8 +1,15 @@
+#include <PinChangeInterrupt.h>
+#include <LowPower.h>
+
+#define DEBUG 1
+
 // Pins
 #define PIN_SLIDER_IN A0
 #define PIN_ENABLE 5
 #define PIN_DIR1 6
 #define PIN_DIR2 7
+#define PIN_SLIDE_UP 9
+#define PIN_SLIDE_DOWN 10
 #define PIN_BELL LED_BUILTIN
 
 // Directions
@@ -108,6 +115,11 @@ int currentStop;
 int currentDirection;
 int nextStop;
 unsigned long deadline;
+volatile unsigned long lastInterrupt;
+
+#ifdef DEBUG
+unsigned long lastReport;
+#endif
 
 
 
@@ -156,11 +168,21 @@ int stopBefore(int position) {
     return lower;
 }
 
+void handleInterrupt() {
+    lastInterrupt = millis();
+}
+
 void setup() {
+    // Disable interrupt for millis(), we don't need it, and it won't be accurate anyway.
+    // Uncomment when using circuit with external time source.
+    // TIMSK0 &= ~_BV(TOIE0); // disable timer0 overflow interrupt
+
     pinMode(PIN_ENABLE, OUTPUT);
     pinMode(PIN_DIR1, OUTPUT);
     pinMode(PIN_DIR2, OUTPUT);
     pinMode(PIN_BELL, OUTPUT);
+    pinMode(PIN_SLIDE_DOWN, INPUT_PULLUP);
+    pinMode(PIN_SLIDE_UP, INPUT_PULLUP);
 
     currentPosition = analogRead(PIN_SLIDER_IN);
     currentStop = stopBefore(currentPosition);    // Don't move the slider on startup
@@ -169,7 +191,10 @@ void setup() {
 
     digitalWrite(PIN_BELL, nextStop == 1 ? HIGH : LOW);
 
+#ifdef DEBUG
     Serial.begin(9600);
+    lastReport = 0;
+#endif
 }
 
 void loop() {
@@ -214,11 +239,30 @@ void loop() {
     else {
         // We've reached the desired position. When we first get here, actively stop the motor.
         // After that, we can just turn it off.
-        setDirection(currentDirection == DIR_STOP ? DIR_OFF : DIR_STOP);
-        currentStop = nextStop;
+        // Then we can sleep the processor until it's time for the next tick. We will get an
+        // interrupt if the slider is moved in the meantime.
+        if (currentDirection == DIR_FORWARD || currentDirection == DIR_REVERSE) {
+            currentStop = nextStop;
+            setDirection(DIR_STOP);
+        }
+        else {
+            setDirection(DIR_OFF);
+            if (digitalRead(PIN_SLIDE_UP) == LOW && digitalRead(PIN_SLIDE_DOWN) == LOW) {
+                attachPCINT(digitalPinToPCINT(PIN_SLIDE_UP), handleInterrupt, RISING);
+                attachPCINT(digitalPinToPCINT(PIN_SLIDE_DOWN), handleInterrupt, RISING);
+
+                LowPower.idle(SLEEP_FOREVER, ADC_OFF, TIMER2_OFF, TIMER1_OFF, TIMER0_ON, SPI_OFF,
+                              USART0_ON, TWI_OFF);
+
+                detachPCINT(digitalPinToPCINT(PIN_SLIDE_UP));
+                detachPCINT(digitalPinToPCINT(PIN_SLIDE_DOWN));
+            }
+        }
     }
 
-    if (Serial.available() > 0) {
+#ifdef DEBUG
+    if ((long) (now - lastReport) > 2000) {
+        lastReport = now;
         Serial.read();  // Doesn't matter what it is, just output state on any input
         Serial.print(F("remaining = "));
         Serial.print(remaining);
@@ -228,6 +272,14 @@ void loop() {
         Serial.print(nextStop);
         Serial.print(F(", currentPosition = "));
         Serial.print(currentPosition);
+        Serial.print(F(", lastInterrupt = "));
+        Serial.print(lastInterrupt);
+        Serial.print(F(", slideUp = "));
+        Serial.print(digitalRead(PIN_SLIDE_UP));
+        Serial.print(F(", slideDown = "));
+        Serial.print(digitalRead(PIN_SLIDE_DOWN));
         Serial.print(F("\n"));
     }
+#endif
+
 }
