@@ -1,5 +1,5 @@
-#ifndef _TIMER_STOPWATCH_H_
-#define _TIMER_STOPWATCH_H_
+#ifndef __TIMER_STOPWATCH_H__
+#define __TIMER_STOPWATCH_H__
 
 namespace stopwatch {
     void setResolution(unsigned long resolutionMs);

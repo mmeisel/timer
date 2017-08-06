@@ -1,3 +1,4 @@
+#include <Arduino.h>
 #include <FrequencyTimer2.h>
 #include "stopwatch.h"
 

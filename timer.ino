@@ -1,5 +1,6 @@
 #include <LowPower.h>
-#include <pins_arduino.h>
+#include "pci.h"
+#include "stop.h"
 #include "stopwatch.h"
 
 #define DEBUG 1
@@ -19,8 +20,6 @@
 #define DIR_REVERSE -1
 #define DIR_FORWARD 1
 
-#define STOP_OFF -1
-
 // Slider properties
 // Slider positions come from analogRead, so the range is 0 to 1023
 #define FUDGE_FACTOR 10
@@ -31,14 +30,6 @@
 // Stops where the motor will create virtual detentes.
 // The first stop should always be the "OFF" position. The second stop should always be the zero
 // position (where the alarm will sound).
-
-struct Stop {
-    int position;
-    unsigned long ms;
-
-    Stop(int _position, long _ms) : position(_position), ms(_ms) {}
-};
-
 const Stop STOPS[] = {
     Stop(0, STOP_OFF),
     // Every 30 seconds up to 5 minutes
@@ -171,27 +162,6 @@ int stopBefore(int position) {
     return lower;
 }
 
-// Set up a pin change interrupt
-void pciEnable(uint8_t pin) {
-    *digitalPinToPCMSK(pin) |= bit(digitalPinToPCMSKbit(pin));  // Enable pin
-    PCIFR |= bit(digitalPinToPCICRbit(pin)); // Clear any outstanding interrupt
-    PCICR |= bit(digitalPinToPCICRbit(pin)); // Enable interrupt for the group
-}
-
-// Disable a pin change interrupt
-void pciDisable(uint8_t pin) {
-    volatile uint8_t* mask = digitalPinToPCMSK(pin);
-
-    *mask &= ~bit(digitalPinToPCMSKbit(pin));  // Disable pin
-    if (*mask == 0) {
-        PCICR &= ~bit(digitalPinToPCICRbit(pin)); // Disable interrupt for the group
-    }
-}
-
-void count() {
-
-}
-
 // Handle pin change interrupt for D8 to D13, this assumes PIN_SLIDE_UP and PIN_SLIDE_DOWN are
 // in this range.
 #ifdef DEBUG
@@ -278,14 +248,14 @@ void loop() {
         else {
             setDirection(DIR_OFF);
             if (digitalRead(PIN_SLIDE_UP) == LOW && digitalRead(PIN_SLIDE_DOWN) == LOW) {
-                pciEnable(PIN_SLIDE_UP);
-                pciEnable(PIN_SLIDE_DOWN);
+                pci::enable(PIN_SLIDE_UP);
+                pci::enable(PIN_SLIDE_DOWN);
 
                 LowPower.idle(SLEEP_FOREVER, ADC_OFF, TIMER2_OFF, TIMER1_OFF, TIMER0_ON, SPI_OFF,
                               USART0_ON, TWI_OFF);
 
-                pciDisable(PIN_SLIDE_UP);
-                pciDisable(PIN_SLIDE_DOWN);
+                pci::disable(PIN_SLIDE_UP);
+                pci::disable(PIN_SLIDE_DOWN);
             }
         }
     }
