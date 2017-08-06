@@ -251,8 +251,7 @@ void loop() {
                 pci::enable(PIN_SLIDE_UP);
                 pci::enable(PIN_SLIDE_DOWN);
 
-                LowPower.idle(SLEEP_FOREVER, ADC_OFF, TIMER2_OFF, TIMER1_OFF, TIMER0_ON, SPI_OFF,
-                              USART0_ON, TWI_OFF);
+                LowPower.powerSave(SLEEP_FOREVER, ADC_OFF, BOD_ON, TIMER2_ON);
 
                 pci::disable(PIN_SLIDE_UP);
                 pci::disable(PIN_SLIDE_DOWN);
