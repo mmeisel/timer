@@ -1,5 +1,6 @@
 #include <LowPower.h>
 #include <pins_arduino.h>
+#include "stopwatch.h"
 
 #define DEBUG 1
 
@@ -8,8 +9,8 @@
 #define PIN_ENABLE 5
 #define PIN_DIR1 6
 #define PIN_DIR2 7
-#define PIN_SLIDE_UP 9
-#define PIN_SLIDE_DOWN 10
+#define PIN_SLIDE_UP 11
+#define PIN_SLIDE_DOWN 12
 #define PIN_BELL LED_BUILTIN
 
 // Directions
@@ -24,13 +25,16 @@
 // Slider positions come from analogRead, so the range is 0 to 1023
 #define FUDGE_FACTOR 10
 
+// Minimum resolvable time resolution in milliseconds
+#define TIMER_RESOLUTION_MS 10UL
+
 // Stops where the motor will create virtual detentes.
 // The first stop should always be the "OFF" position. The second stop should always be the zero
 // position (where the alarm will sound).
 
 struct Stop {
     int position;
-    long ms;
+    unsigned long ms;
 
     Stop(int _position, long _ms) : position(_position), ms(_ms) {}
 };
@@ -114,10 +118,9 @@ int currentPosition;
 int currentStop;
 int currentDirection;
 int nextStop;
-unsigned long deadline;
 
 #ifdef DEBUG
-volatile unsigned long lastInterrupt;
+volatile unsigned int interruptCount;
 unsigned long lastReport;
 #endif
 
@@ -185,17 +188,30 @@ void pciDisable(uint8_t pin) {
     }
 }
 
+void count() {
+
+}
+
 // Handle pin change interrupt for D8 to D13, this assumes PIN_SLIDE_UP and PIN_SLIDE_DOWN are
 // in this range.
 #ifdef DEBUG
 ISR (PCINT0_vect) {
-    lastInterrupt = millis();
+    interruptCount++;
 }
 #endif
 
 void setup() {
-    // Disable interrupt for millis() (timer0), we don't need it, and it won't be accurate anyway.
+
+#ifdef DEBUG
+    lastReport = 0;
+    interruptCount = 0;
+    Serial.begin(9600);
+#endif
+
+    // We have our own clock (using timer2). Initialize that and disable timer0, which is what
+    // powers millis(). We don't need it, and it won't be accurate anyway.
     TIMSK0 &= ~_BV(TOIE0);
+    stopwatch::setResolution(TIMER_RESOLUTION_MS);
 
     pinMode(PIN_ENABLE, OUTPUT);
     pinMode(PIN_DIR1, OUTPUT);
@@ -207,19 +223,13 @@ void setup() {
     currentPosition = analogRead(PIN_SLIDER_IN);
     currentStop = stopBefore(currentPosition);    // Don't move the slider on startup
     nextStop = currentStop;
-    deadline = millis() + STOPS[currentStop].ms;
+    stopwatch::reset(STOPS[currentStop].ms);
 
     digitalWrite(PIN_BELL, nextStop == 1 ? HIGH : LOW);
-
-#ifdef DEBUG
-    Serial.begin(9600);
-    lastReport = 0;
-#endif
 }
 
 void loop() {
-    unsigned long now = millis();
-    long remaining = (long) (deadline - now);
+    unsigned long remaining = stopwatch::remaining();
     bool stopChanged = false;
 
     currentPosition = analogRead(PIN_SLIDER_IN);
@@ -232,7 +242,7 @@ void loop() {
     {
         int nearestStop = stopBefore(currentPosition);
 
-        deadline = now + STOPS[nearestStop].ms;
+        stopwatch::reset(STOPS[nearestStop].ms);
         currentStop = nearestStop;
         nextStop = nearestStop;
         stopChanged = true;
@@ -281,8 +291,8 @@ void loop() {
     }
 
 #ifdef DEBUG
-    if ((long) (now - lastReport) > 5000) {
-        lastReport = now;
+    if (remaining > lastReport - 5000) {
+        lastReport = remaining;
         Serial.read();  // Doesn't matter what it is, just output state on any input
         Serial.print(F("remaining = "));
         Serial.print(remaining);
@@ -292,8 +302,8 @@ void loop() {
         Serial.print(nextStop);
         Serial.print(F(", currentPosition = "));
         Serial.print(currentPosition);
-        Serial.print(F(", lastInterrupt = "));
-        Serial.print(lastInterrupt);
+        Serial.print(F(", interruptCount = "));
+        Serial.print(interruptCount);
         Serial.print(F(", slideUp = "));
         Serial.print(digitalRead(PIN_SLIDE_UP));
         Serial.print(F(", slideDown = "));
