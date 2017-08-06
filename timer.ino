@@ -1,5 +1,5 @@
-#include <PinChangeInterrupt.h>
 #include <LowPower.h>
+#include <pins_arduino.h>
 
 #define DEBUG 1
 
@@ -115,9 +115,9 @@ int currentStop;
 int currentDirection;
 int nextStop;
 unsigned long deadline;
-volatile unsigned long lastInterrupt;
 
 #ifdef DEBUG
+volatile unsigned long lastInterrupt;
 unsigned long lastReport;
 #endif
 
@@ -168,14 +168,34 @@ int stopBefore(int position) {
     return lower;
 }
 
-void handleInterrupt() {
-    lastInterrupt = millis();
+// Set up a pin change interrupt
+void pciEnable(uint8_t pin) {
+    *digitalPinToPCMSK(pin) |= bit(digitalPinToPCMSKbit(pin));  // Enable pin
+    PCIFR |= bit(digitalPinToPCICRbit(pin)); // Clear any outstanding interrupt
+    PCICR |= bit(digitalPinToPCICRbit(pin)); // Enable interrupt for the group
 }
 
+// Disable a pin change interrupt
+void pciDisable(uint8_t pin) {
+    volatile uint8_t* mask = digitalPinToPCMSK(pin);
+
+    *mask &= ~bit(digitalPinToPCMSKbit(pin));  // Disable pin
+    if (*mask == 0) {
+        PCICR &= ~bit(digitalPinToPCICRbit(pin)); // Disable interrupt for the group
+    }
+}
+
+// Handle pin change interrupt for D8 to D13, this assumes PIN_SLIDE_UP and PIN_SLIDE_DOWN are
+// in this range.
+#ifdef DEBUG
+ISR (PCINT0_vect) {
+    lastInterrupt = millis();
+}
+#endif
+
 void setup() {
-    // Disable interrupt for millis(), we don't need it, and it won't be accurate anyway.
-    // Uncomment when using circuit with external time source.
-    // TIMSK0 &= ~_BV(TOIE0); // disable timer0 overflow interrupt
+    // Disable interrupt for millis() (timer0), we don't need it, and it won't be accurate anyway.
+    TIMSK0 &= ~_BV(TOIE0);
 
     pinMode(PIN_ENABLE, OUTPUT);
     pinMode(PIN_DIR1, OUTPUT);
@@ -248,20 +268,20 @@ void loop() {
         else {
             setDirection(DIR_OFF);
             if (digitalRead(PIN_SLIDE_UP) == LOW && digitalRead(PIN_SLIDE_DOWN) == LOW) {
-                attachPCINT(digitalPinToPCINT(PIN_SLIDE_UP), handleInterrupt, RISING);
-                attachPCINT(digitalPinToPCINT(PIN_SLIDE_DOWN), handleInterrupt, RISING);
+                pciEnable(PIN_SLIDE_UP);
+                pciEnable(PIN_SLIDE_DOWN);
 
                 LowPower.idle(SLEEP_FOREVER, ADC_OFF, TIMER2_OFF, TIMER1_OFF, TIMER0_ON, SPI_OFF,
                               USART0_ON, TWI_OFF);
 
-                detachPCINT(digitalPinToPCINT(PIN_SLIDE_UP));
-                detachPCINT(digitalPinToPCINT(PIN_SLIDE_DOWN));
+                pciDisable(PIN_SLIDE_UP);
+                pciDisable(PIN_SLIDE_DOWN);
             }
         }
     }
 
 #ifdef DEBUG
-    if ((long) (now - lastReport) > 2000) {
+    if ((long) (now - lastReport) > 5000) {
         lastReport = now;
         Serial.read();  // Doesn't matter what it is, just output state on any input
         Serial.print(F("remaining = "));
