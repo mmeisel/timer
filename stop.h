@@ -5,9 +5,10 @@
 
 struct Stop {
     int position;
-    unsigned long ms;
+    uint32_t seconds;
 
-    Stop(int _position, unsigned long _ms) : position(_position), ms(_ms) {}
+    Stop(int _position, uint32_t _seconds) : position(_position), seconds(_seconds) {
+    }
 };
 
 #endif

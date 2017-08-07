@@ -1,38 +1,60 @@
 #include <Arduino.h>
-#include <FrequencyTimer2.h>
+#include <util/atomic.h>
 #include "stopwatch.h"
 
 namespace {
-    unsigned long resolutionMs_ = 1UL;
-    volatile unsigned long ticksRemaining_ = 0UL;
+    volatile uint32_t secondsRemaining_ = 0UL;
+    bool initialized_ = false;
 
-    void tick_() {
-        if (ticksRemaining_ > 0) {
-            ticksRemaining_--;
+//Overflow ISR
+    ISR(TIMER2_OVF_vect) {
+        if (secondsRemaining_ > 0) {
+            secondsRemaining_--;
         }
     }
 }
 
 namespace stopwatch {
-    void setResolution(unsigned long resolutionMs) {
-        resolutionMs_ = resolutionMs;
-        FrequencyTimer2::setPeriod(resolutionMs_ * 1000UL);
-        FrequencyTimer2::setOnOverflow(tick_);
+    void reset(uint32_t seconds) {
+        pause();
+
+        secondsRemaining_ = seconds;
+
+        if (!initialized_) {
+            initialized_ = true;
+            // Enable asynchronous mode
+            ASSR = bit(AS2);
+            // Set prescaler to 128 (32768 / 256, which gives an overflow every second)
+            TCCR2B |= bit(CS22) | bit(CS00);
+        }
+        
+        // Reset initial counter value
+        TCNT2 = 0;
+        // Wait for registers to update
+        while (ASSR & (bit(TCR2BUB) | bit(TCN2UB)));
+
+        resume();
     }
 
-    void reset(unsigned long ms) {
-        FrequencyTimer2::disable();
-        ticksRemaining_ = ms / resolutionMs_;
-        FrequencyTimer2::enable();
+    void pause() {
+        // Disable timer2 interrupts
+        TIMSK2 = 0;
     }
 
-    unsigned long remaining() {
-        unsigned long ticksRemaining;
+    void resume() {
+        // Clear interrupt flags
+        TIFR2 = bit(TOV2);
+        // Enable Timer2 overflow interrupt
+        TIMSK2 = bit(TOIE2);
+    }
 
-        noInterrupts();
-        ticksRemaining = ticksRemaining_;
-        interrupts();
+    uint32_t remaining() {
+        uint32_t secondsRemaining;
 
-        return ticksRemaining * resolutionMs_;
+        ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+            secondsRemaining = secondsRemaining_;
+        }
+
+        return secondsRemaining;
     }
 }

@@ -24,12 +24,86 @@
 // Slider positions come from analogRead, so the range is 0 to 1023
 #define FUDGE_FACTOR 10
 
-// Minimum resolvable time resolution in milliseconds
-#define TIMER_RESOLUTION_MS 10UL
-
 // Stops where the motor will create virtual detentes.
 // The first stop should always be the "OFF" position. The second stop should always be the zero
 // position (where the alarm will sound).
+#ifdef DEBUG
+
+const Stop STOPS[] = {
+    Stop(0, STOP_OFF),
+    // Every 3 seconds up to 30 seconds
+    Stop(15,   0),
+    Stop(31,   3),
+    Stop(47,   6),
+    Stop(63,   9),
+    Stop(79,   12),
+    Stop(95,   15),
+    Stop(111,  18),
+    Stop(127,  21),
+    Stop(143,  24),
+    Stop(159,  27),
+    Stop(175,  30),
+    // Every 6 seconds up to 180 seconds
+    Stop(191,  36),
+    Stop(207,  42),
+    Stop(223,  48),
+    Stop(239,  54),
+    Stop(255,  60),
+    Stop(271,  66),
+    Stop(287,  72),
+    Stop(303,  78),
+    Stop(319,  84),
+    Stop(335,  90),
+    Stop(351,  96),
+    Stop(367,  102),
+    Stop(383,  108),
+    Stop(399,  114),
+    Stop(415,  120),
+    Stop(431,  126),
+    Stop(447,  132),
+    Stop(463,  138),
+    Stop(479,  144),
+    Stop(495,  150),
+    Stop(511,  156),
+    Stop(527,  162),
+    Stop(543,  168),
+    Stop(559,  174),
+    Stop(575,  180),
+    // Every 12 seconds up to 6 minutes
+    Stop(591,  192),
+    Stop(607,  204),
+    Stop(623,  216),
+    Stop(639,  228),
+    Stop(655,  240),
+    Stop(671,  252),
+    Stop(687,  264),
+    Stop(703,  276),
+    Stop(719,  288),
+    Stop(735,  300),
+    Stop(751,  312),
+    Stop(767,  324),
+    Stop(783,  336),
+    Stop(799,  348),
+    Stop(815,  360),
+    // Every minute up to 12 minutes
+    Stop(831,  396),
+    Stop(847,  432),
+    Stop(863,  468),
+    Stop(879,  504),
+    Stop(895,  540),
+    Stop(911,  576),
+    Stop(927,  612),
+    Stop(943,  648),
+    Stop(959,  684),
+    Stop(975,  720),
+    // Every 2 minutes up to 18 minutes
+    Stop(991,  840),
+    Stop(1007, 960),
+    Stop(1023, 1080)
+};
+
+#else
+
 const Stop STOPS[] = {
     Stop(0, STOP_OFF),
     // Every 30 seconds up to 5 minutes
@@ -102,6 +176,8 @@ const Stop STOPS[] = {
     Stop(1007, 9600),
     Stop(1023, 10800)
 };
+
+#endif
 
 const int NUM_STOPS = sizeof(STOPS) / sizeof(Stop);
 
@@ -178,10 +254,11 @@ void setup() {
     Serial.begin(9600);
 #endif
 
+#ifndef DEBUG
     // We have our own clock (using timer2). Initialize that and disable timer0, which is what
     // powers millis(). We don't need it, and it won't be accurate anyway.
-    TIMSK0 &= ~_BV(TOIE0);
-    stopwatch::setResolution(TIMER_RESOLUTION_MS);
+    TIMSK0 &= ~bit(TOIE0);
+#endif
 
     pinMode(PIN_ENABLE, OUTPUT);
     pinMode(PIN_DIR1, OUTPUT);
@@ -193,13 +270,13 @@ void setup() {
     currentPosition = analogRead(PIN_SLIDER_IN);
     currentStop = stopBefore(currentPosition);    // Don't move the slider on startup
     nextStop = currentStop;
-    stopwatch::reset(STOPS[currentStop].ms);
+    stopwatch::reset(STOPS[currentStop].seconds);
 
     digitalWrite(PIN_BELL, nextStop == 1 ? HIGH : LOW);
 }
 
 void loop() {
-    unsigned long remaining = stopwatch::remaining();
+    uint32_t remaining = stopwatch::remaining();
     bool stopChanged = false;
 
     currentPosition = analogRead(PIN_SLIDER_IN);
@@ -212,12 +289,12 @@ void loop() {
     {
         int nearestStop = stopBefore(currentPosition);
 
-        stopwatch::reset(STOPS[nearestStop].ms);
+        stopwatch::reset(STOPS[nearestStop].seconds);
         currentStop = nearestStop;
         nextStop = nearestStop;
         stopChanged = true;
     }
-    else if (nextStop > 1 && remaining <= STOPS[nextStop - 1].ms) {
+    else if (nextStop > 1 && remaining <= STOPS[nextStop - 1].seconds) {
         // Normal operation (not off or ringing): move the slider down as time passes
         nextStop--;
         stopChanged = true;
@@ -251,7 +328,7 @@ void loop() {
                 pci::enable(PIN_SLIDE_UP);
                 pci::enable(PIN_SLIDE_DOWN);
 
-                LowPower.powerSave(SLEEP_FOREVER, ADC_OFF, BOD_ON, TIMER2_ON);
+                LowPower.powerSave(SLEEP_FOREVER, ADC_OFF, BOD_OFF, TIMER2_ON);
 
                 pci::disable(PIN_SLIDE_UP);
                 pci::disable(PIN_SLIDE_DOWN);
@@ -260,9 +337,8 @@ void loop() {
     }
 
 #ifdef DEBUG
-    if (remaining > lastReport - 5000) {
+    if ((int32_t) (remaining - lastReport) > 5) {
         lastReport = remaining;
-        Serial.read();  // Doesn't matter what it is, just output state on any input
         Serial.print(F("remaining = "));
         Serial.print(remaining);
         Serial.print(F(", currentStop = "));
@@ -273,11 +349,10 @@ void loop() {
         Serial.print(currentPosition);
         Serial.print(F(", interruptCount = "));
         Serial.print(interruptCount);
-        Serial.print(F(", slideUp = "));
-        Serial.print(digitalRead(PIN_SLIDE_UP));
-        Serial.print(F(", slideDown = "));
-        Serial.print(digitalRead(PIN_SLIDE_DOWN));
+        Serial.print(F(", millisAwake = "));
+        Serial.print(millis());
         Serial.print(F("\n"));
+        Serial.flush();
     }
 #endif
 
