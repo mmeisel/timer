@@ -238,18 +238,36 @@ int stopBefore(int position) {
     return lower;
 }
 
+#ifdef DEBUG
+
 // Handle pin change interrupt for D8 to D13, this assumes PIN_SLIDE_UP and PIN_SLIDE_DOWN are
 // in this range.
-#ifdef DEBUG
 ISR (PCINT0_vect) {
     interruptCount++;
 }
+
+void printReport(uint32_t remaining) {
+    Serial.print(F("remaining = "));
+    Serial.print(remaining);
+    Serial.print(F(", currentStop = "));
+    Serial.print(currentStop);
+    Serial.print(F(", nextStop = "));
+    Serial.print(nextStop);
+    Serial.print(F(", currentPosition = "));
+    Serial.print(currentPosition);
+    Serial.print(F(", interruptCount = "));
+    Serial.print(interruptCount);
+    Serial.print(F(", millisAwake = "));
+    Serial.print(millis());
+    Serial.print(F("\n"));
+    Serial.flush();
+}
+
 #endif
 
 void setup() {
 
 #ifdef DEBUG
-    lastReport = 0;
     interruptCount = 0;
     Serial.begin(9600);
 #endif
@@ -332,28 +350,11 @@ void loop() {
 
                 pci::disable(PIN_SLIDE_UP);
                 pci::disable(PIN_SLIDE_DOWN);
+
+#ifdef DEBUG
+                printReport(remaining);
+#endif
             }
         }
     }
-
-#ifdef DEBUG
-    if ((int32_t) (remaining - lastReport) > 5) {
-        lastReport = remaining;
-        Serial.print(F("remaining = "));
-        Serial.print(remaining);
-        Serial.print(F(", currentStop = "));
-        Serial.print(currentStop);
-        Serial.print(F(", nextStop = "));
-        Serial.print(nextStop);
-        Serial.print(F(", currentPosition = "));
-        Serial.print(currentPosition);
-        Serial.print(F(", interruptCount = "));
-        Serial.print(interruptCount);
-        Serial.print(F(", millisAwake = "));
-        Serial.print(millis());
-        Serial.print(F("\n"));
-        Serial.flush();
-    }
-#endif
-
 }
