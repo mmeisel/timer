@@ -334,7 +334,7 @@ void loop() {
 
     int desiredPosition = STOPS[nextStop].position;
 
-    // Be more strict with positioning that detection
+    // Be more strict with positioning than detection
     if (currentPosition < desiredPosition - FUDGE_FACTOR / 2) {
         setDirection(DIR_FORWARD);
     }
@@ -342,10 +342,11 @@ void loop() {
         setDirection(DIR_REVERSE);
     }
     else {
-        // We've reached the desired position.
+        // We've reached the desired position. Initially use fast stop to halt the slider. Once
+        // it's been stopped for at least a tick, we can turn it off completely to save power.
         // We can sleep the processor until it's time for the next tick. We will get an interrupt
         // if the slider is moved in the meantime.
-        setDirection(DIR_OFF);
+        setDirection(currentDirection == DIR_STOP ? DIR_OFF : DIR_STOP);
         if (digitalRead(PIN_SLIDE_UP) == LOW && digitalRead(PIN_SLIDE_DOWN) == LOW) {
             pci::enable(PIN_SLIDE_UP);
             pci::enable(PIN_SLIDE_DOWN);
