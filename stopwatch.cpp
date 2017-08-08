@@ -2,11 +2,13 @@
 #include <util/atomic.h>
 #include "stopwatch.h"
 
+// Based on http://www.embedds.com/avr-timer2-asynchronous-mode/
+
 namespace {
     volatile uint32_t secondsRemaining_ = 0;
     bool initialized_ = false;
 
-//Overflow ISR
+    // Overflow ISR
     ISR(TIMER2_OVF_vect) {
         if (secondsRemaining_ > 0) {
             secondsRemaining_--;
