@@ -3,7 +3,7 @@
 #include "stopwatch.h"
 
 namespace {
-    volatile uint32_t secondsRemaining_ = 0UL;
+    volatile uint32_t secondsRemaining_ = 0;
     bool initialized_ = false;
 
 //Overflow ISR
@@ -18,7 +18,9 @@ namespace stopwatch {
     void reset(uint32_t seconds) {
         pause();
 
-        secondsRemaining_ = seconds;
+        ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+            secondsRemaining_ = seconds;
+        }
 
         if (!initialized_) {
             initialized_ = true;
