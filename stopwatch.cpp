@@ -20,9 +20,7 @@ namespace stopwatch {
     void reset(uint32_t seconds) {
         pause();
 
-        ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-            secondsRemaining_ = seconds;
-        }
+        secondsRemaining_ = seconds;
 
         if (!initialized_) {
             initialized_ = true;

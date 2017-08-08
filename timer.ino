@@ -343,29 +343,22 @@ void loop() {
         setDirection(DIR_REVERSE);
     }
     else {
-        // We've reached the desired position. When we first get here, actively stop the motor.
-        // After that, we can just turn it off.
-        // Then we can sleep the processor until it's time for the next tick. We will get an
-        // interrupt if the slider is moved in the meantime.
-        if (currentDirection == DIR_FORWARD || currentDirection == DIR_REVERSE) {
-            currentStop = nextStop;
-            setDirection(DIR_STOP);
-        }
-        else {
-            setDirection(DIR_OFF);
-            if (digitalRead(PIN_SLIDE_UP) == LOW && digitalRead(PIN_SLIDE_DOWN) == LOW) {
-                pci::enable(PIN_SLIDE_UP);
-                pci::enable(PIN_SLIDE_DOWN);
+        // We've reached the desired position.
+        // We can sleep the processor until it's time for the next tick. We will get an interrupt
+        // if the slider is moved in the meantime.
+        setDirection(DIR_OFF);
+        if (digitalRead(PIN_SLIDE_UP) == LOW && digitalRead(PIN_SLIDE_DOWN) == LOW) {
+            pci::enable(PIN_SLIDE_UP);
+            pci::enable(PIN_SLIDE_DOWN);
 
-                LowPower.powerSave(SLEEP_FOREVER, ADC_OFF, BOD_OFF, TIMER2_ON);
+            LowPower.powerSave(SLEEP_FOREVER, ADC_OFF, BOD_OFF, TIMER2_ON);
 
-                pci::disable(PIN_SLIDE_UP);
-                pci::disable(PIN_SLIDE_DOWN);
+            pci::disable(PIN_SLIDE_UP);
+            pci::disable(PIN_SLIDE_DOWN);
 
 #ifdef DEBUG
-                printReport(remaining);
+            printReport(remaining);
 #endif
-            }
         }
     }
 }

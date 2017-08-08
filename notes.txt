@@ -11,3 +11,4 @@ TODO:
 - Draw schematic
 - Check timing accuracy
 - Make buzzer less awful
+- Random beeps when moving slider?
