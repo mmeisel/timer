@@ -22,7 +22,7 @@
 
 // Slider properties
 // Slider positions come from analogRead, so the range is 0 to 1023
-#define FUDGE_FACTOR 10
+#define FUDGE_FACTOR 4
 
 // Stops where the motor will create virtual detentes.
 // The first stop should always be the "OFF" position. The second stop should always be the zero
@@ -303,7 +303,7 @@ void loop() {
     // If not, a human must have moved it, or be holding it in place.
     if (currentPosition < STOPS[nextStop].position - FUDGE_FACTOR ||
         currentPosition > STOPS[currentStop].position + FUDGE_FACTOR ||
-        currentStop - nextStop > 1)
+        currentStop - nextStop > 2)
     {
         int nearestStop = stopBefore(currentPosition);
 
@@ -325,10 +325,11 @@ void loop() {
 
     int desiredPosition = STOPS[nextStop].position;
 
-    if (currentPosition < desiredPosition - FUDGE_FACTOR) {
+    // Be more strict with positioning that detection
+    if (currentPosition < desiredPosition - FUDGE_FACTOR / 2) {
         setDirection(DIR_FORWARD);
     }
-    else if (currentPosition > desiredPosition + FUDGE_FACTOR) {
+    else if (currentPosition > desiredPosition + FUDGE_FACTOR / 2) {
         setDirection(DIR_REVERSE);
     }
     else {
