@@ -188,7 +188,6 @@ int nextStop;
 
 #ifdef DEBUG
 volatile unsigned int interruptCount;
-unsigned long lastReport;
 #endif
 
 
