@@ -238,6 +238,16 @@ int stopBefore(int position) {
     return lower;
 }
 
+void reset(int stop) {
+    if (stop == 0) {
+        // The OFF position
+        stopwatch::pause();
+    }
+    else {
+        stopwatch::reset(STOPS[stop].seconds);
+    }
+}
+
 #ifdef DEBUG
 
 // Handle pin change interrupt for D8 to D13, this assumes PIN_SLIDE_UP and PIN_SLIDE_DOWN are
@@ -288,7 +298,7 @@ void setup() {
     currentPosition = analogRead(PIN_SLIDER_IN);
     currentStop = stopBefore(currentPosition);    // Don't move the slider on startup
     nextStop = currentStop;
-    stopwatch::reset(STOPS[currentStop].seconds);
+    reset(currentStop);
 
     digitalWrite(PIN_BELL, nextStop == 1 ? HIGH : LOW);
 }
@@ -307,7 +317,7 @@ void loop() {
     {
         int nearestStop = stopBefore(currentPosition);
 
-        stopwatch::reset(STOPS[nearestStop].seconds);
+        reset(nearestStop);
         currentStop = nearestStop;
         nextStop = nearestStop;
         stopChanged = true;
