@@ -1,5 +1,5 @@
 #include <LowPower.h>
-#include "pci.h"
+#include "adc.h"
 #include "stop.h"
 #include "stopwatch.h"
 
@@ -10,8 +10,7 @@
 #define PIN_ENABLE 5
 #define PIN_DIR1 6
 #define PIN_DIR2 7
-#define PIN_SLIDE_UP 11
-#define PIN_SLIDE_DOWN 12
+#define PIN_START_INTERRUPT 2
 #define PIN_BELL LED_BUILTIN
 
 // Directions
@@ -21,7 +20,7 @@
 #define DIR_FORWARD 1
 
 // Slider properties
-// Slider positions come from analogRead, so the range is 0 to 1023
+// Slider positions come are in the range 0 to 1023
 #define FUDGE_FACTOR 4
 
 // Stops where the motor will create virtual detentes.
@@ -247,13 +246,14 @@ void reset(int stop) {
     }
 }
 
-#ifdef DEBUG
 
-// Handle pin change interrupt for D8 to D13, this assumes PIN_SLIDE_UP and PIN_SLIDE_DOWN are
-// in this range.
-ISR (PCINT0_vect) {
+void handlePinInterrupt() {
+#ifdef DEBUG
     interruptCount++;
+#endif
 }
+
+#ifdef DEBUG
 
 void printReport(uint32_t remaining) {
     Serial.print(F("remaining = "));
@@ -278,7 +278,7 @@ void setup() {
 
 #ifdef DEBUG
     interruptCount = 0;
-    Serial.begin(9600);
+    Serial.begin(57600);
 #endif
 
 #ifndef DEBUG
@@ -291,10 +291,10 @@ void setup() {
     pinMode(PIN_DIR1, OUTPUT);
     pinMode(PIN_DIR2, OUTPUT);
     pinMode(PIN_BELL, OUTPUT);
-    pinMode(PIN_SLIDE_DOWN, INPUT_PULLUP);
-    pinMode(PIN_SLIDE_UP, INPUT_PULLUP);
+    pinMode(PIN_START_INTERRUPT, INPUT);
+    adc::setPin(PIN_SLIDER_IN);
 
-    currentPosition = analogRead(PIN_SLIDER_IN);
+    currentPosition = adc::read();
     currentStop = stopBefore(currentPosition);    // Don't move the slider on startup
     nextStop = currentStop;
     reset(currentStop);
@@ -306,7 +306,10 @@ void loop() {
     uint32_t remaining = stopwatch::remaining();
     bool stopChanged = false;
 
-    currentPosition = analogRead(PIN_SLIDER_IN);
+    if (!adc::isRunning()) {
+        // As long as a conversion isn't in progress, update the latest value
+        currentPosition = adc::lastValue();
+    }
 
     // Check if the slider is in the expected range and is moving in a timely manner.
     // If not, a human must have moved it, or be holding it in place.
@@ -342,19 +345,28 @@ void loop() {
         setDirection(DIR_REVERSE);
     }
     else {
-        // We've reached the desired position. Initially use fast stop to halt the slider. Once
-        // it's been stopped for at least a tick, we can turn it off completely to save power.
-        // We can sleep the processor until it's time for the next tick. We will get an interrupt
-        // if the slider is moved in the meantime.
-        setDirection(currentDirection == DIR_STOP ? DIR_OFF : DIR_STOP);
-        if (digitalRead(PIN_SLIDE_UP) == LOW && digitalRead(PIN_SLIDE_DOWN) == LOW) {
-            pci::enable(PIN_SLIDE_UP);
-            pci::enable(PIN_SLIDE_DOWN);
+        // We've reached the desired position. 
+        // The sleep state we enter will depend on whether the timer is running or not.
+        currentStop = nextStop;
+    
+        if (currentStop == 0) {
+            setDirection(DIR_OFF);
+            attachInterrupt(digitalPinToInterrupt(PIN_START_INTERRUPT), handlePinInterrupt, LOW);
 
-            LowPower.powerSave(SLEEP_FOREVER, ADC_OFF, BOD_OFF, TIMER2_ON);
+            LowPower.powerDown(SLEEP_FOREVER, ADC_OFF, BOD_OFF);
 
-            pci::disable(PIN_SLIDE_UP);
-            pci::disable(PIN_SLIDE_DOWN);
+            detachInterrupt(digitalPinToInterrupt(PIN_START_INTERRUPT));
+        }
+        else {
+            // Initially use fast stop to halt the slider. Once it's been stopped, we can turn it
+            // off completely to save power.
+            if (currentDirection != DIR_OFF) {
+                setDirection(currentDirection == DIR_STOP ? DIR_OFF : DIR_STOP);
+            }
+
+            // This will sleep the processor. We will wake either from the stopwatch (Timer2)
+            // or from the completion of the ADC.
+            adc::startAndSleep();
 
 #ifdef DEBUG
             printReport(remaining);
