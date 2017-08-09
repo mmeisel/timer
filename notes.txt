@@ -6,6 +6,12 @@ This should be set by the "Arduino on Breadboard" board model.
 C_e = 2(12.5) - 6 = 19 pF external capacitors required when using crystal as timer oscillator
 (Can try 22 or 15.)
 
+Arduino as ISP -- need to use adafruit's fork and connect pin 9 to pin 9 to provide a clock signal
+
+Slide detection: Just using this to detect movement out of the OFF position, the comparator
+threshold may need to be adjusted if the stop size is adjusted significantly. 50 mV seems like a
+reasonable starting point.
+
 TODO:
 - Slide detection too unreliable
 - Draw schematic
