@@ -10,7 +10,26 @@ Arduino as ISP -- need to use adafruit's fork and connect pin 9 to pin 9 to prov
 
 Slide detection: Just using this to detect movement out of the OFF position, the comparator
 threshold may need to be adjusted if the stop size is adjusted significantly. 50 mV seems like a
-reasonable starting point.
+reasonable starting point. Except that the bottom of the slide isn't really zero, at least on the
+pot side that I fried. The other one actually looks OK. It will be nicer to have a larger "OFF"
+area anyway so it's harder to turn it on by accident, so I will make that stop larger. And this
+threshold needs to actually be something that registers as a stop so you can't end up in an "ON"
+state that just drains the battery. You need to know it's on if it's using power. The circuit is a
+voltage divider, so the threshold is a percentage of the input voltage. The first stop (where the
+buzzer goes off) is currently at 3% of the total voltage, so that's what the voltage divider will
+do. So this DEFINITELY needs to be adjusted if the stops are changed.
+
+How to fix it:
+- Stops at fixed intervals, except OFF and ZERO, which should be further apart (wider). This means
+  division to figure out which stop we're at instead of binary search
+- Treat the value coming from the ADC as having some precision (e.g. +/- 2), only do something if
+  it changes by more than the precision
+- Each stop should have a "size" for the purpose of positioning the slider. Once the slider gets
+  within that range once (currentStop == nextStop), don't move it any more unless it actually goes
+  to a different stop (either from the stopwatch or because the user moved it)
+- Be explicit about the mode we're in, possibly based on what interrupt woke us up
+  - For the timer, just see if it's time to move to the next stop
+  - For the ADC, just do the position handling (differently when currentStop == nextStop, as above)
 
 TODO:
 - Slide detection too unreliable

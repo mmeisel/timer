@@ -66,12 +66,18 @@ namespace adc {
     }
 
     int lastValue() {
-        int output;
+        // The atomic block is only necessary if the interrupt might fire, which can only happen
+        // if the ADC is currently running.
+        if (isRunning_) {
+            int output;
 
-        ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-            output = lastValue_;
+            ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+                output = lastValue_;
+            }
+            return output;
         }
-
-        return output;
+        else {
+            return lastValue_;
+        }
     }
 }

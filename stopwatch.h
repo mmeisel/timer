@@ -2,10 +2,12 @@
 #define __TIMER_STOPWATCH_H__
 
 namespace stopwatch {
-    void reset(uint32_t seconds);
+    void reset(unsigned seconds);
     void pause();
     void resume();
-    uint32_t remaining();
+    unsigned remaining();
+    void attachInterrupt(void (*userFn)(void));
+    void detachInterrupt();
 }
 
 #endif

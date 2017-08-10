@@ -1,5 +1,6 @@
 #include <LowPower.h>
 #include "adc.h"
+#include "motor.h"
 #include "stop.h"
 #include "stopwatch.h"
 
@@ -10,274 +11,149 @@
 #define PIN_ENABLE 5
 #define PIN_DIR1 6
 #define PIN_DIR2 7
-#define PIN_START_INTERRUPT 2
+#define PIN_START_INTERRUPT 2   // Needs to be an interruptable pin! (2 or 3)
 #define PIN_BELL LED_BUILTIN
 
-// Directions
-#define DIR_STOP 0
-#define DIR_OFF 255
-#define DIR_REVERSE -1
-#define DIR_FORWARD 1
-
-// Slider properties
-// Slider positions come are in the range 0 to 1023
-#define FUDGE_FACTOR 4
-
-// Stops where the motor will create virtual detentes.
-// The first stop should always be the "OFF" position. The second stop should always be the zero
-// position (where the alarm will sound).
-#ifdef DEBUG
-
-const Stop STOPS[] = {
-    Stop(0, STOP_OFF),
-    // Every 3 seconds up to 30 seconds
-    Stop(15,   0),
-    Stop(31,   3),
-    Stop(47,   6),
-    Stop(63,   9),
-    Stop(79,   12),
-    Stop(95,   15),
-    Stop(111,  18),
-    Stop(127,  21),
-    Stop(143,  24),
-    Stop(159,  27),
-    Stop(175,  30),
-    // Every 6 seconds up to 180 seconds
-    Stop(191,  36),
-    Stop(207,  42),
-    Stop(223,  48),
-    Stop(239,  54),
-    Stop(255,  60),
-    Stop(271,  66),
-    Stop(287,  72),
-    Stop(303,  78),
-    Stop(319,  84),
-    Stop(335,  90),
-    Stop(351,  96),
-    Stop(367,  102),
-    Stop(383,  108),
-    Stop(399,  114),
-    Stop(415,  120),
-    Stop(431,  126),
-    Stop(447,  132),
-    Stop(463,  138),
-    Stop(479,  144),
-    Stop(495,  150),
-    Stop(511,  156),
-    Stop(527,  162),
-    Stop(543,  168),
-    Stop(559,  174),
-    Stop(575,  180),
-    // Every 12 seconds up to 6 minutes
-    Stop(591,  192),
-    Stop(607,  204),
-    Stop(623,  216),
-    Stop(639,  228),
-    Stop(655,  240),
-    Stop(671,  252),
-    Stop(687,  264),
-    Stop(703,  276),
-    Stop(719,  288),
-    Stop(735,  300),
-    Stop(751,  312),
-    Stop(767,  324),
-    Stop(783,  336),
-    Stop(799,  348),
-    Stop(815,  360),
-    // Every minute up to 12 minutes
-    Stop(831,  396),
-    Stop(847,  432),
-    Stop(863,  468),
-    Stop(879,  504),
-    Stop(895,  540),
-    Stop(911,  576),
-    Stop(927,  612),
-    Stop(943,  648),
-    Stop(959,  684),
-    Stop(975,  720),
-    // Every 2 minutes up to 18 minutes
-    Stop(991,  840),
-    Stop(1007, 960),
-    Stop(1023, 1080)
-};
-
-#else
-
-const Stop STOPS[] = {
-    Stop(0, STOP_OFF),
-    // Every 30 seconds up to 5 minutes
-    Stop(15,   0),
-    Stop(31,   30),
-    Stop(47,   60),
-    Stop(63,   90),
-    Stop(79,   120),
-    Stop(95,   150),
-    Stop(111,  180),
-    Stop(127,  210),
-    Stop(143,  240),
-    Stop(159,  270),
-    Stop(175,  300),
-    // Every minute up to 30 minutes
-    Stop(191,  360),
-    Stop(207,  420),
-    Stop(223,  480),
-    Stop(239,  540),
-    Stop(255,  600),
-    Stop(271,  660),
-    Stop(287,  720),
-    Stop(303,  780),
-    Stop(319,  840),
-    Stop(335,  900),
-    Stop(351,  960),
-    Stop(367,  1020),
-    Stop(383,  1080),
-    Stop(399,  1140),
-    Stop(415,  1200),
-    Stop(431,  1260),
-    Stop(447,  1320),
-    Stop(463,  1380),
-    Stop(479,  1440),
-    Stop(495,  1500),
-    Stop(511,  1560),
-    Stop(527,  1620),
-    Stop(543,  1680),
-    Stop(559,  1740),
-    Stop(575,  1800),
-    // Every 2 minutes up to 1 hour
-    Stop(591,  1920),
-    Stop(607,  2040),
-    Stop(623,  2160),
-    Stop(639,  2280),
-    Stop(655,  2400),
-    Stop(671,  2520),
-    Stop(687,  2640),
-    Stop(703,  2760),
-    Stop(719,  2880),
-    Stop(735,  3000),
-    Stop(751,  3120),
-    Stop(767,  3240),
-    Stop(783,  3360),
-    Stop(799,  3480),
-    Stop(815,  3600),
-    // Every 10 minutes up to 2 hours
-    Stop(831,  3960),
-    Stop(847,  4320),
-    Stop(863,  4680),
-    Stop(879,  5040),
-    Stop(895,  5400),
-    Stop(911,  5760),
-    Stop(927,  6120),
-    Stop(943,  6480),
-    Stop(959,  6840),
-    Stop(975,  7200),
-    // Every 20 minutes up to 3 hours
-    Stop(991,  8400),
-    Stop(1007, 9600),
-    Stop(1023, 10800)
-};
-
-#endif
-
-const int NUM_STOPS = sizeof(STOPS) / sizeof(Stop);
-
-int currentPosition;
-int currentStop;
-int currentDirection;
-int nextStop;
-
-#ifdef DEBUG
-volatile unsigned int interruptCount;
-#endif
+// Constants
+#define ADC_FUDGE_FACTOR 2
 
 
 
-void setDirection(int direction) {
-    currentDirection = direction;
+int currentPosition_ = ~0;
+stop::Stop currentStop_ = stop::STOP_NOT_A_STOP;
+stop::Stop nextStop_ = stop::STOP_NOT_A_STOP;
+Motor motor_(PIN_ENABLE, PIN_DIR1, PIN_DIR2);
 
-    switch (direction) {
-        case DIR_REVERSE:
-            digitalWrite(PIN_DIR1, LOW);
-            digitalWrite(PIN_DIR2, HIGH);
-            digitalWrite(PIN_ENABLE, HIGH);
-            break;
-        case DIR_STOP:
-            digitalWrite(PIN_DIR1, LOW);
-            digitalWrite(PIN_DIR2, LOW);
-            digitalWrite(PIN_ENABLE, HIGH);
-            break;
-        case DIR_OFF:
-            digitalWrite(PIN_DIR1, LOW);
-            digitalWrite(PIN_DIR2, LOW);
-            digitalWrite(PIN_ENABLE, LOW);
-            break;
-        case DIR_FORWARD:
-            digitalWrite(PIN_DIR1, HIGH);
-            digitalWrite(PIN_DIR2, LOW);
-            digitalWrite(PIN_ENABLE, HIGH);
-            break;
-    }
-}
-
-int stopBefore(int position) {
-    int lower = 0;
-    int upper = NUM_STOPS;
-
-    while (lower < upper - 1) {
-        int middle = (lower + upper) / 2;
-
-        if (position < STOPS[middle].position) {
-            upper = middle;
-        }
-        else {
-            lower = middle;
-        }
-    }
-
-    return lower;
-}
-
-void reset(int stop) {
-    if (stop == 0) {
-        // The OFF position
-        stopwatch::pause();
-    }
-    else {
-        stopwatch::reset(STOPS[stop].seconds);
-    }
-}
+volatile bool ticked_ = false;
 
 
-void handlePinInterrupt() {
-#ifdef DEBUG
-    interruptCount++;
-#endif
-}
 
 #ifdef DEBUG
 
-void printReport(uint32_t remaining) {
+volatile unsigned int interruptCount_;
+
+#define DEBUG_REPORT() printReport()
+#define DEBUG_REPORT_IF(condition) ((condition) ? printReport() : (void) 0)
+
+void printReport() {
     Serial.print(F("remaining = "));
-    Serial.print(remaining);
+    Serial.print(stopwatch::remaining());
     Serial.print(F(", currentStop = "));
-    Serial.print(currentStop);
+    Serial.print(currentStop_.index);
     Serial.print(F(", nextStop = "));
-    Serial.print(nextStop);
+    Serial.print(nextStop_.index);
+    Serial.print(F(", motorDirection = "));
+    Serial.print((int) motor_.direction());
     Serial.print(F(", currentPosition = "));
-    Serial.print(currentPosition);
+    Serial.print(currentPosition_);
     Serial.print(F(", interruptCount = "));
-    Serial.print(interruptCount);
+    Serial.print(interruptCount_);
     Serial.print(F(", millisAwake = "));
     Serial.print(millis());
     Serial.print(F("\n"));
     Serial.flush();
 }
 
+#else
+
+#define DEBUG_REPORT() ((void) 0)
+#define DEBUG_REPORT_IF(x) ((void) 0)
+
 #endif
 
-void setup() {
+
+
+void handlePinInterrupt() {
+#ifdef DEBUG
+    interruptCount_++;
+#endif
+}
+
+void handleTick() {
+    ticked_ = true;
+}
+
+void shutdown() {
+    motor_.setDirection(MotorDirection::OFF);
+    stopwatch::pause();
+
+    if (digitalRead(PIN_START_INTERRUPT) == LOW) {
+#ifdef DEBUG
+        Serial.print(F("Can't fully power down, adjust resistor values\n"));
+        Serial.flush();
+#endif
+        LowPower.powerDown(SLEEP_1S, ADC_OFF, BOD_OFF);
+        return;
+    }
+
+    attachInterrupt(digitalPinToInterrupt(PIN_START_INTERRUPT), handlePinInterrupt, LOW);
 
 #ifdef DEBUG
-    interruptCount = 0;
+    Serial.print(F("Powering down\n"));
+    Serial.flush();
+#endif
+    
+    LowPower.powerDown(SLEEP_FOREVER, ADC_OFF, BOD_OFF);
+
+    // When turned on again, stop listening for interrupts on the start detection pin, and start
+    // a fresh ADC check right away.
+    detachInterrupt(digitalPinToInterrupt(PIN_START_INTERRUPT));
+}
+
+bool updatePosition() {
+    if (!adc::isRunning()) {
+        int newPosition = adc::lastValue();
+
+        if (abs(currentPosition_ - newPosition) > ADC_FUDGE_FACTOR) {
+            // Ignore position changes that aren't greater than ADC_FUDGE_FACTOR
+            currentPosition_ = newPosition;
+            return true;
+        }
+    }
+
+    return false;
+}
+
+void updateMotor() {
+    if (currentPosition_ < nextStop_.startPosition) {
+        // Handle overshoot
+        DEBUG_REPORT_IF(motor_.direction() != MotorDirection::FORWARD);
+        motor_.setDirection(MotorDirection::FORWARD);
+    }
+    else if (currentPosition_ > nextStop_.startPosition + STOP_DETENTE_SIZE) {
+        // Normal movement to the next stop. Special case for position 0: make sure the slider gets
+        // all the way down there!
+        DEBUG_REPORT_IF(motor_.direction() != MotorDirection::REVERSE);
+        motor_.setDirection(MotorDirection::REVERSE);
+    }
+    else {
+        // We reached the detente!
+        motor_.setDirection(MotorDirection::OFF);
+        currentStop_ = nextStop_;
+        DEBUG_REPORT();
+    }
+}
+
+void updateStop() {
+    stop::Stop nearestStop = stop::byPosition(currentPosition_);
+
+    currentStop_ = nearestStop;
+    nextStop_ = nearestStop;
+
+    digitalWrite(PIN_BELL, nextStop_.index == STOP_INDEX_ZERO ? HIGH : LOW);
+
+    if (currentStop_.index != STOP_INDEX_OFF) {
+        stopwatch::reset(currentStop_.seconds);
+    }
+
+    DEBUG_REPORT();
+}
+
+
+
+void setup() {
+#ifdef DEBUG
+    interruptCount_ = 0;
     Serial.begin(57600);
 #endif
 
@@ -291,86 +167,63 @@ void setup() {
     pinMode(PIN_DIR1, OUTPUT);
     pinMode(PIN_DIR2, OUTPUT);
     pinMode(PIN_BELL, OUTPUT);
-    pinMode(PIN_START_INTERRUPT, INPUT);
+    pinMode(PIN_START_INTERRUPT, INPUT_PULLUP);
+
+    digitalWrite(PIN_BELL, LOW);
     adc::setPin(PIN_SLIDER_IN);
+    stopwatch::attachInterrupt(handleTick);
+    motor_.setDirection(MotorDirection::OFF);
 
-    currentPosition = adc::read();
-    currentStop = stopBefore(currentPosition);    // Don't move the slider on startup
-    nextStop = currentStop;
-    reset(currentStop);
-
-    digitalWrite(PIN_BELL, nextStop == 1 ? HIGH : LOW);
+    currentPosition_ = adc::read();
+    updateStop();
+    updateMotor();
 }
 
 void loop() {
-    uint32_t remaining = stopwatch::remaining();
-    bool stopChanged = false;
+    adc::startAndSleep();
 
-    if (!adc::isRunning()) {
-        // As long as a conversion isn't in progress, update the latest value
-        currentPosition = adc::lastValue();
+    if (updatePosition()) {
+        if (motor_.direction() != MotorDirection::OFF) {
+            // When the motor is moving, just keep going until we hit the desired position.
+            updateMotor();
+        }
+        else if (currentPosition_ < currentStop_.startPosition - ADC_FUDGE_FACTOR ||
+            currentPosition_ > currentStop_.endPosition + ADC_FUDGE_FACTOR)                
+        {
+            // The motor isn't moving, but the position changed, so a human must have moved the
+            // slider. If they actually moved it to a new stop, update the stop.
+            updateStop();
+        }
+    }
+    else if (ticked_) {
+        // If the position didn't change but the stopwatch ticked, check if it's time to go to the
+        // next stop.
+        ticked_ = false;
+
+        int index = nextStop_.index;
+
+        if (index != STOP_INDEX_OFF && index != STOP_INDEX_ZERO) {
+            // Normal operation (not off or ringing): move the slider down as time passes
+            stop::Stop nextNextStop = stop::byIndex(index - 1);
+
+            if (stopwatch::remaining() <= nextNextStop.seconds) {
+                if (nextNextStop.index == STOP_INDEX_ZERO) {
+                    digitalWrite(PIN_BELL, HIGH);
+                }
+                nextStop_ = nextNextStop;
+                updateMotor();
+            }
+        }
     }
 
-    // Check if the slider is in the expected range and is moving in a timely manner.
-    // If not, a human must have moved it, or be holding it in place.
-    if (currentPosition < STOPS[nextStop].position - FUDGE_FACTOR ||
-        currentPosition > STOPS[currentStop].position + FUDGE_FACTOR ||
-        currentStop - nextStop > 2)
-    {
-        int nearestStop = stopBefore(currentPosition);
-
-        reset(nearestStop);
-        currentStop = nearestStop;
-        nextStop = nearestStop;
-        stopChanged = true;
-    }
-    else if (nextStop > 1 && remaining <= STOPS[nextStop - 1].seconds) {
-        // Normal operation (not off or ringing): move the slider down as time passes
-        nextStop--;
-        stopChanged = true;
-    }
-
-    if (stopChanged) {
-        // Enable or disable the bell based on whether we're headed to the zero stop (stop 1)
-        digitalWrite(PIN_BELL, nextStop == 1 ? HIGH : LOW);
-    }
-
-    int desiredPosition = STOPS[nextStop].position;
-
-    // Be more strict with positioning than detection
-    if (currentPosition < desiredPosition - FUDGE_FACTOR / 2) {
-        setDirection(DIR_FORWARD);
-    }
-    else if (currentPosition > desiredPosition + FUDGE_FACTOR / 2) {
-        setDirection(DIR_REVERSE);
-    }
-    else {
-        // We've reached the desired position. 
-        // The sleep state we enter will depend on whether the timer is running or not.
-        currentStop = nextStop;
-    
-        if (currentStop == 0) {
-            setDirection(DIR_OFF);
-            attachInterrupt(digitalPinToInterrupt(PIN_START_INTERRUPT), handlePinInterrupt, LOW);
-
-            LowPower.powerDown(SLEEP_FOREVER, ADC_OFF, BOD_OFF);
-
-            detachInterrupt(digitalPinToInterrupt(PIN_START_INTERRUPT));
+    if (motor_.direction() == MotorDirection::OFF) {
+        // When the motor isn't running, enter low power operation. If the slider is in the off
+        // position, shutdown completely.
+        if (currentStop_.index == STOP_INDEX_OFF) {
+            shutdown();
         }
         else {
-            // Initially use fast stop to halt the slider. Once it's been stopped, we can turn it
-            // off completely to save power.
-            if (currentDirection != DIR_OFF) {
-                setDirection(currentDirection == DIR_STOP ? DIR_OFF : DIR_STOP);
-            }
-
-            // This will sleep the processor. We will wake either from the stopwatch (Timer2)
-            // or from the completion of the ADC.
-            adc::startAndSleep();
-
-#ifdef DEBUG
-            printReport(remaining);
-#endif
+            LowPower.powerSave(SLEEP_FOREVER, ADC_OFF, BOD_OFF, TIMER2_ON);
         }
     }
 }

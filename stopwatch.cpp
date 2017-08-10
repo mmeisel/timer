@@ -5,19 +5,23 @@
 // Based on http://www.embedds.com/avr-timer2-asynchronous-mode/
 
 namespace {
-    volatile uint32_t secondsRemaining_ = 0;
+    volatile unsigned secondsRemaining_ = 0;
     bool initialized_ = false;
+    void (*userFn_)(void) = nullptr;
 
     // Overflow ISR
     ISR(TIMER2_OVF_vect) {
         if (secondsRemaining_ > 0) {
             secondsRemaining_--;
         }
+        if (userFn_) {
+            userFn_();
+        }
     }
 }
 
 namespace stopwatch {
-    void reset(uint32_t seconds) {
+    void reset(unsigned seconds) {
         pause();
 
         secondsRemaining_ = seconds;
@@ -50,8 +54,8 @@ namespace stopwatch {
         TIMSK2 = bit(TOIE2);
     }
 
-    uint32_t remaining() {
-        uint32_t secondsRemaining;
+    unsigned remaining() {
+        unsigned secondsRemaining;
 
         ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
             secondsRemaining = secondsRemaining_;
@@ -59,4 +63,13 @@ namespace stopwatch {
 
         return secondsRemaining;
     }
+
+    void attachInterrupt(void (*userFn)(void)) {
+        userFn_ = userFn;
+    }
+
+    void detachInterrupt() {
+        userFn_ = nullptr;
+    }
+
 }
