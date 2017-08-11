@@ -28,16 +28,18 @@ namespace stopwatch {
 
         if (!initialized_) {
             initialized_ = true;
-            // Enable asynchronous mode
+            // Enable asynchronous mode using the watch crystal
             ASSR = bit(AS2);
-            // Set prescaler to 128 (32768 / 256, which gives an overflow every second)
-            TCCR2B |= bit(CS22) | bit(CS00);
+            // Disable compare output, use normal waveform generation mode (counter), and
+            // set prescaler to 128 (32768 / 256), which gives an overflow every second
+            TCCR2A = 0;
+            TCCR2B = bit(CS22) | bit(CS20);
         }
         
         // Reset initial counter value
         TCNT2 = 0;
         // Wait for registers to update
-        while (ASSR & (bit(TCR2BUB) | bit(TCN2UB)));
+        while (ASSR & (bit(TCN2UB) | bit(TCR2BUB) | bit(TCR2AUB)));
 
         resume();
     }
@@ -48,7 +50,7 @@ namespace stopwatch {
     }
 
     void resume() {
-        // Clear interrupt flags
+        // Clear interrupt flag
         TIFR2 = bit(TOV2);
         // Enable Timer2 overflow interrupt
         TIMSK2 = bit(TOIE2);
