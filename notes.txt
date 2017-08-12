@@ -32,7 +32,7 @@ How to fix it:
   - For the ADC, just do the position handling (differently when currentStop == nextStop, as above)
 
 TODO:
-- Slide detection too unreliable
+- Getting stuck at stops because we wake up, read the new position, and it's off by one.
 - Draw schematic
 - Check timing accuracy
 - Make buzzer less awful

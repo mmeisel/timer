@@ -34,12 +34,19 @@ namespace stopwatch {
             // set prescaler to 128 (32768 / 256), which gives an overflow every second
             TCCR2A = 0;
             TCCR2B = bit(CS22) | bit(CS20);
+
+            // Wait for registers to update
+            while (ASSR & (bit(TCR2BUB) | bit(TCR2AUB)));
+
+            // Reset prescaler and wait for it to finish
+            GTCCR |= bit(PSRASY);
+            while (GTCCR & bit(PSRASY));
         }
-        
+
         // Reset initial counter value
         TCNT2 = 0;
-        // Wait for registers to update
-        while (ASSR & (bit(TCN2UB) | bit(TCR2BUB) | bit(TCR2AUB)));
+        // Wait for register to update
+        while (ASSR & bit(TCN2UB));
 
         resume();
     }

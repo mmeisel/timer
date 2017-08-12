@@ -15,13 +15,15 @@
 #define PIN_BELL LED_BUILTIN
 
 // Constants
-#define ADC_FUDGE_FACTOR 2
+#define SIGNIFICANT_POSITION_CHANGE 8
 
 
 
 int currentPosition_ = ~0;
-stop::Stop currentStop_ = stop::STOP_NOT_A_STOP;
-stop::Stop nextStop_ = stop::STOP_NOT_A_STOP;
+int positionChange_ = 0;
+bool ringing_ = false;
+stop::Stop currentStop_;
+stop::Stop nextStop_;
 Motor motor_(PIN_ENABLE, PIN_DIR1, PIN_DIR2);
 
 volatile bool ticked_ = false;
@@ -32,23 +34,22 @@ volatile bool ticked_ = false;
 
 volatile unsigned int interruptCount_;
 
-#define DEBUG_REPORT() printReport()
-#define DEBUG_REPORT_IF(condition) ((condition) ? printReport() : (void) 0)
+#define DEBUG_REPORT(message) printReport(message)
+#define DEBUG_REPORT_IF(condition, message) ((condition) ? printReport(message) : (void) 0)
 
-void printReport() {
-    Serial.print(F("remaining = "));
+void printReport(const char* message) {
+    Serial.print(message);
+    Serial.print(F("\n\tremaining="));
     Serial.print(stopwatch::remaining());
-    Serial.print(F(", currentStop = "));
+    Serial.print(F(" currentStop="));
     Serial.print(currentStop_.index);
-    Serial.print(F(", nextStop = "));
+    Serial.print(F(" nextStop="));
     Serial.print(nextStop_.index);
-    Serial.print(F(", motorDirection = "));
-    Serial.print((int) motor_.direction());
-    Serial.print(F(", currentPosition = "));
+    Serial.print(F(" currentPosition="));
     Serial.print(currentPosition_);
-    Serial.print(F(", interruptCount = "));
+    Serial.print(F(" interruptCount="));
     Serial.print(interruptCount_);
-    Serial.print(F(", millisAwake = "));
+    Serial.print(F(" millisAwake="));
     Serial.print(millis());
     Serial.print(F("\n"));
     Serial.flush();
@@ -56,8 +57,8 @@ void printReport() {
 
 #else
 
-#define DEBUG_REPORT() ((void) 0)
-#define DEBUG_REPORT_IF(x) ((void) 0)
+#define DEBUG_REPORT(x) ((void) 0)
+#define DEBUG_REPORT_IF(x, y) ((void) 0)
 
 #endif
 
@@ -104,11 +105,9 @@ bool updatePosition() {
     if (!adc::isRunning()) {
         int newPosition = adc::lastValue();
 
-        if (abs(currentPosition_ - newPosition) > ADC_FUDGE_FACTOR) {
-            // Ignore position changes that aren't greater than ADC_FUDGE_FACTOR
-            currentPosition_ = newPosition;
-            return true;
-        }
+        positionChange_ = abs(newPosition - currentPosition_);
+        currentPosition_ = newPosition;
+        return positionChange_ != 0;
     }
 
     return false;
@@ -117,39 +116,76 @@ bool updatePosition() {
 void updateMotor() {
     if (currentPosition_ < nextStop_.startPosition) {
         // Handle overshoot
-        DEBUG_REPORT_IF(motor_.direction() != MotorDirection::FORWARD);
+        DEBUG_REPORT_IF(motor_.direction() != MotorDirection::FORWARD, "Motor forward");
         motor_.setDirection(MotorDirection::FORWARD);
     }
     else if (currentPosition_ > nextStop_.startPosition + STOP_DETENTE_SIZE) {
         // Normal movement to the next stop. Special case for position 0: make sure the slider gets
         // all the way down there!
-        DEBUG_REPORT_IF(motor_.direction() != MotorDirection::REVERSE);
+        DEBUG_REPORT_IF(motor_.direction() != MotorDirection::REVERSE, "Motor reverse");
         motor_.setDirection(MotorDirection::REVERSE);
     }
     else {
         // We reached the detente!
         motor_.setDirection(MotorDirection::OFF);
         currentStop_ = nextStop_;
-        DEBUG_REPORT();
+        DEBUG_REPORT("Motor off");
     }
 }
 
-void updateStop() {
-    stop::Stop nearestStop = stop::byPosition(currentPosition_);
+void updateBell() {
+    bool newState = nextStop_.index == STOP_INDEX_ZERO;
 
-    currentStop_ = nearestStop;
-    nextStop_ = nearestStop;
+    if (newState != ringing_) {
+        ringing_ = newState;
+        digitalWrite(PIN_BELL, ringing_ ? HIGH : LOW);
+    }
+}
 
-    digitalWrite(PIN_BELL, nextStop_.index == STOP_INDEX_ZERO ? HIGH : LOW);
+void setStopFromPosition() {
+    currentStop_ = stop::byPosition(currentPosition_);
+    nextStop_ = currentStop_;
+    updateBell();
 
     if (currentStop_.index != STOP_INDEX_OFF) {
         stopwatch::reset(currentStop_.seconds);
+        // When resetting the stopwatch, unset ticked_ since any unhandled interrupts are useless
+        // now, anyway.
+        ticked_ = false;
     }
 
-    DEBUG_REPORT();
+    DEBUG_REPORT("Stop set by human");
 }
 
+void checkStopwatch() {
+    unsigned remaining = stopwatch::remaining();
+    int index = nextStop_.index;
 
+    // Find the lowest stop with seconds greater than or equal to remaining
+    while (index > STOP_INDEX_ZERO && stop::byIndex(index - 1).seconds >= remaining) {
+        index--;
+    }
+
+    if (index < nextStop_.index) {
+#ifdef DEBUG
+        Serial.print("Tick ");
+        Serial.print(nextStop_.index);
+        Serial.print(" (");
+        Serial.print(nextStop_.seconds);
+        Serial.print(") to ");
+        Serial.print(index);
+        Serial.print(" (");
+        Serial.print(stop::byIndex(index).seconds);
+        Serial.print(")");
+#endif
+
+        nextStop_ = stop::byIndex(index);
+        // The DEBUG_REPORT is here instead of the above block so nextStop is printed correctly
+        DEBUG_REPORT("");
+        updateBell();
+        updateMotor();
+    }
+}
 
 void setup() {
 #ifdef DEBUG
@@ -169,13 +205,14 @@ void setup() {
     pinMode(PIN_BELL, OUTPUT);
     pinMode(PIN_START_INTERRUPT, INPUT_PULLUP);
 
-    digitalWrite(PIN_BELL, LOW);
+    updateBell();
     adc::setPin(PIN_SLIDER_IN);
+    stop::createStops();
     stopwatch::attachInterrupt(handleTick);
     motor_.setDirection(MotorDirection::OFF);
 
     currentPosition_ = adc::read();
-    updateStop();
+    setStopFromPosition();
     updateMotor();
 }
 
@@ -187,33 +224,20 @@ void loop() {
             // When the motor is moving, just keep going until we hit the desired position.
             updateMotor();
         }
-        else if (currentPosition_ < currentStop_.startPosition - ADC_FUDGE_FACTOR ||
-            currentPosition_ > currentStop_.endPosition + ADC_FUDGE_FACTOR)                
+        else if (positionChange_ >= SIGNIFICANT_POSITION_CHANGE &&
+            (currentPosition_ < currentStop_.startPosition ||
+             currentPosition_ >= currentStop_.endPosition))
         {
-            // The motor isn't moving, but the position changed, so a human must have moved the
-            // slider. If they actually moved it to a new stop, update the stop.
-            updateStop();
+            // If the position changed significantly and isn't where we're intending to be, a human
+            // must have moved the slider. If they actually moved it to a new stop, update the stop.
+            setStopFromPosition();
         }
     }
-    else if (ticked_) {
-        // If the position didn't change but the stopwatch ticked, check if it's time to go to the
-        // next stop.
+
+    if (ticked_) {
+        // If the stopwatch ticked, check if it's time to go to the next stop.
         ticked_ = false;
-
-        int index = nextStop_.index;
-
-        if (index != STOP_INDEX_OFF && index != STOP_INDEX_ZERO) {
-            // Normal operation (not off or ringing): move the slider down as time passes
-            stop::Stop nextNextStop = stop::byIndex(index - 1);
-
-            if (stopwatch::remaining() <= nextNextStop.seconds) {
-                if (nextNextStop.index == STOP_INDEX_ZERO) {
-                    digitalWrite(PIN_BELL, HIGH);
-                }
-                nextStop_ = nextNextStop;
-                updateMotor();
-            }
-        }
+        checkStopwatch();
     }
 
     if (motor_.direction() == MotorDirection::OFF) {
