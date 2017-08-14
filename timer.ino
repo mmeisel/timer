@@ -12,10 +12,11 @@
 #define PIN_DIR1 6
 #define PIN_DIR2 7
 #define PIN_START_INTERRUPT 2   // Needs to be an interruptable pin! (2 or 3)
-#define PIN_BELL LED_BUILTIN
+#define PIN_BELL 8
 
 // Constants
 #define SIGNIFICANT_POSITION_CHANGE 8
+#define CRYSTAL_STABILIZATION_MS 1000
 
 
 
@@ -83,7 +84,7 @@ void shutdown() {
         Serial.print(F("Can't fully power down, adjust resistor values\n"));
         Serial.flush();
 #endif
-        LowPower.powerDown(SLEEP_1S, ADC_OFF, BOD_OFF);
+        LowPower.powerSave(SLEEP_1S, ADC_OFF, BOD_OFF, TIMER2_ON);
         return;
     }
 
@@ -96,9 +97,9 @@ void shutdown() {
     
     LowPower.powerDown(SLEEP_FOREVER, ADC_OFF, BOD_OFF);
 
-    // When turned on again, stop listening for interrupts on the start detection pin, and start
-    // a fresh ADC check right away.
+    // When turned on again, stop listening for interrupts on the start detection pin
     detachInterrupt(digitalPinToInterrupt(PIN_START_INTERRUPT));
+    waitForCrystal();
 }
 
 bool updatePosition() {
@@ -187,6 +188,12 @@ void checkStopwatch() {
     }
 }
 
+void waitForCrystal() {
+    // After starting from power down, the crystal needs to stabilize, see:
+    // http://www.atmel.com/images/atmel-1259-real-time-clock-rtc-using-the-asynchronous-timer_ap-note_avr134.pdf
+    delay(CRYSTAL_STABILIZATION_MS);
+}
+
 void setup() {
 #ifdef DEBUG
     interruptCount_ = 0;
@@ -210,6 +217,8 @@ void setup() {
     stop::createStops();
     stopwatch::attachInterrupt(handleTick);
     motor_.setDirection(MotorDirection::OFF);
+
+    waitForCrystal();
 
     currentPosition_ = adc::read();
     setStopFromPosition();
