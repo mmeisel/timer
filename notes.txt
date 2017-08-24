@@ -31,9 +31,18 @@ How to fix it:
   - For the timer, just see if it's time to move to the next stop
   - For the ADC, just do the position handling (differently when currentStop == nextStop, as above)
 
+Alarm:
+- Getting the melody to work is a pain. The tone() libary seems to use Timer2, which we are already
+  using. Timer1 would be better. Also, need to decide if we can sleep (and for how long) while the
+  timer is going off. Don't want to misread a position.
+- The buzzer just doesn't sound good. Going to try a speaker. It should actually be easier to play a
+  sound that way using this library:
+  https://github.com/TMRh20/AutoAnalogAudio/blob/master/examples/SimpleSine/SimpleSine.ino
+
+WIP:
+- To avoid possible bad states, better to have the software always be in "ringing" state when the
+  slider is below the first stop, but just let the state of the off-switch-circuit override this.
+
 TODO:
-- Getting stuck at stops because we wake up, read the new position, and it's off by one.
 - Draw schematic
 - Check timing accuracy
-- Make buzzer less awful
-- Random beeps when moving slider?
