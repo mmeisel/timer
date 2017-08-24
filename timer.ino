@@ -200,12 +200,6 @@ void setup() {
     Serial.begin(57600);
 #endif
 
-#ifndef DEBUG
-    // We have our own clock (using timer2). Initialize that and disable timer0, which is what
-    // powers millis(). We don't need it, and it won't be accurate anyway.
-    TIMSK0 &= ~bit(TOIE0);
-#endif
-
     pinMode(PIN_ENABLE, OUTPUT);
     pinMode(PIN_DIR1, OUTPUT);
     pinMode(PIN_DIR2, OUTPUT);
