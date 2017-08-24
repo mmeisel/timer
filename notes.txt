@@ -19,6 +19,16 @@ voltage divider, so the threshold is a percentage of the input voltage. The firs
 buzzer goes off) is currently at 3% of the total voltage, so that's what the voltage divider will
 do. So this DEFINITELY needs to be adjusted if the stops are changed.
 
+I tried to avoid possible bad states by having the software always be in "ringing" state when the
+slider is below the first stop and just let the state of the power switch circuit override this. So,
+if the power switch is in the "off" position, the timer is always actually powered down. However,
+this doesn't work. It would make it possible for the motor, when moving the slider to stop zero, to
+actually turn off the timer. In other words, when the timer reaches zero, it could just turn itself
+off immediately and never ring. Bad idea! The big advantage of the current implementation (treating
+OFF as a stop and only shutting down once that stop is reached) is that a human must actually move
+the slider to that position before the timer will go off, which is the desired behavior.
+
+
 How to fix it:
 - Stops at fixed intervals, except OFF and ZERO, which should be further apart (wider). This means
   division to figure out which stop we're at instead of binary search
@@ -39,9 +49,6 @@ Alarm:
   sound that way using this library:
   https://github.com/TMRh20/AutoAnalogAudio/blob/master/examples/SimpleSine/SimpleSine.ino
 
-WIP:
-- To avoid possible bad states, better to have the software always be in "ringing" state when the
-  slider is below the first stop, but just let the state of the off-switch-circuit override this.
 
 TODO:
 - Draw schematic

@@ -11,8 +11,8 @@
 #define PIN_ENABLE 5
 #define PIN_DIR1 6
 #define PIN_DIR2 7
-#define PIN_START_INTERRUPT 2   // Needs to be an interruptable pin! (2 or 3)
-#define PIN_BELL 8
+#define PIN_POWER 2   // Needs to be an interruptable pin! (2 or 3)
+#define PIN_BELL 9
 
 // Constants
 #define SIGNIFICANT_POSITION_CHANGE 8
@@ -79,7 +79,7 @@ void shutdown() {
     motor_.setDirection(MotorDirection::OFF);
     stopwatch::pause();
 
-    if (digitalRead(PIN_START_INTERRUPT) == LOW) {
+    if (digitalRead(PIN_POWER) == LOW) {
 #ifdef DEBUG
         Serial.print(F("Can't fully power down, adjust resistor values\n"));
         Serial.flush();
@@ -88,17 +88,17 @@ void shutdown() {
         return;
     }
 
-    attachInterrupt(digitalPinToInterrupt(PIN_START_INTERRUPT), handlePinInterrupt, LOW);
-
 #ifdef DEBUG
     Serial.print(F("Powering down\n"));
     Serial.flush();
 #endif
-    
+
+    // Power down and wake up only if we get an interrupt from the power pin
+    attachInterrupt(digitalPinToInterrupt(PIN_POWER), handlePinInterrupt, LOW);
     LowPower.powerDown(SLEEP_FOREVER, ADC_OFF, BOD_OFF);
 
-    // When turned on again, stop listening for interrupts on the start detection pin
-    detachInterrupt(digitalPinToInterrupt(PIN_START_INTERRUPT));
+    // When turned on again, stop listening for interrupts on the power pin
+    detachInterrupt(digitalPinToInterrupt(PIN_POWER));
     waitForCrystal();
 }
 
@@ -127,7 +127,7 @@ void updateMotor() {
         motor_.setDirection(MotorDirection::REVERSE);
     }
     else {
-        // We reached the detente!
+        // We reached the stop!
         motor_.setDirection(MotorDirection::OFF);
         currentStop_ = nextStop_;
         DEBUG_REPORT("Motor off");
@@ -204,9 +204,8 @@ void setup() {
     pinMode(PIN_DIR1, OUTPUT);
     pinMode(PIN_DIR2, OUTPUT);
     pinMode(PIN_BELL, OUTPUT);
-    pinMode(PIN_START_INTERRUPT, INPUT_PULLUP);
+    pinMode(PIN_POWER, INPUT_PULLUP);
 
-    updateBell();
     adc::setPin(PIN_SLIDER_IN);
     stop::createStops();
     stopwatch::attachInterrupt(handleTick);
