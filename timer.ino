@@ -191,7 +191,12 @@ void checkStopwatch() {
 void waitForCrystal() {
     // After starting from power down, the crystal needs to stabilize, see:
     // http://www.atmel.com/images/atmel-1259-real-time-clock-rtc-using-the-asynchronous-timer_ap-note_avr134.pdf
-    delay(CRYSTAL_STABILIZATION_MS);
+#ifdef DEBUG
+    Serial.print(F("Waiting for crystal\n"));
+    Serial.flush();
+#endif
+
+    stopwatch::stabilize();
 }
 
 void setup() {

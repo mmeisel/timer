@@ -2,6 +2,7 @@
 #define __TIMER_STOPWATCH_H__
 
 namespace stopwatch {
+    void stabilize();
     void reset(unsigned seconds);
     void pause();
     void resume();
