@@ -49,6 +49,27 @@ Alarm:
   sound that way using this library:
   https://github.com/TMRh20/AutoAnalogAudio/blob/master/examples/SimpleSine/SimpleSine.ino
 
+Here are the calculations from http://www.electronics-tutorials.ws/amplifier/amp_2.html for the
+amplifier circuit assuming a 2N5551 transistor and a 1V drop across the speaker:
+
+V_RE = 3V (5V supply, 1V for speaker, 1V for transitor, so 3V left to drop)
+I_C_MAX = (5V - 3V) / 8Ω = 250mA
+I_C_Q = ((5V - 3V) / 2) / 8Ω = 125mA
+I_B = 125mA / 150 = 833µA
+R2 = (3V + 1V) / (10 * 833µA) = 480Ω (470)
+R1 = (5V - 4V) / (11 * 833µA) = 109Ω (100)
+I_E = 125mA + 833µA = 125.833mA
+R_E = 3V / 125.833mA = 24Ω (22)
+
+And redone to produce 250mA (500mA max) at the speaker:
+
+I_C_MAX = 500mA
+I_C_Q = 250mA
+V_RE = 5V - 500mA * 8Ω = 1V
+I_B = 250mA / 150 = 1.667mA
+R2 =~ 1kΩ
+R1 =~ 220Ω
+R_E = 1V / 251.667mA = 3.97Ω (Try 2x10 in parallel)
 
 TODO:
 - Draw schematic

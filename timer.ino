@@ -9,10 +9,10 @@
 // Pins
 #define PIN_SLIDER_IN A0
 #define PIN_ENABLE 5
-#define PIN_DIR1 6
+#define PIN_DIR1 8
 #define PIN_DIR2 7
 #define PIN_POWER 2   // Needs to be an interruptable pin! (2 or 3)
-#define PIN_BELL 9
+#define PIN_BELL 6
 
 // Constants
 #define SIGNIFICANT_POSITION_CHANGE 8
