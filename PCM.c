@@ -30,7 +30,7 @@
 #include <avr/io.h>
 #include <avr/pgmspace.h>
 
-#define SAMPLE_RATE 8000
+#define SAMPLE_RATE 16000
 
 #if defined(ARDUINO) && ARDUINO >= 100
 #include "Arduino.h"
@@ -64,7 +64,7 @@
  * sox audiodump.wav -c 1 -r 8000 -u -b macstartup-8000.wav
  */
 
-int speakerPin = 11;
+int speakerPin = 6;
 unsigned char const *sounddata_data=0;
 int sounddata_length=0;
 volatile uint16_t sample;
@@ -78,11 +78,11 @@ ISR(TIMER1_COMPA_vect) {
     }
     else {
       // Ramp down to zero to reduce the click at the end of playback.
-      OCR2A = sounddata_length + lastSample - sample;
+      OCR0A = sounddata_length + lastSample - sample;
     }
   }
   else {
-    OCR2A = pgm_read_byte(&sounddata_data[sample]);
+    OCR0A = pgm_read_byte(&sounddata_data[sample]);
   }
   
   ++sample;
@@ -95,26 +95,23 @@ void startPlayback(unsigned char const *data, int length)
 
   pinMode(speakerPin, OUTPUT);
   
-  // Set up Timer 2 to do pulse width modulation on the speaker
+  // Set up Timer 0 to do pulse width modulation on the speaker
   // pin.
   
-  // Use internal clock (datasheet p.160)
-  ASSR &= ~(_BV(EXCLK) | _BV(AS2));
-  
   // Set fast PWM mode  (p.157)
-  TCCR2A |= _BV(WGM21) | _BV(WGM20);
-  TCCR2B &= ~_BV(WGM22);
+  TCCR0A |= _BV(WGM01) | _BV(WGM00);
+  TCCR0B &= ~_BV(WGM02);
   
-  // Do non-inverting PWM on pin OC2A (p.155)
-  // On the Arduino this is pin 11.
-  TCCR2A = (TCCR2A | _BV(COM2A1)) & ~_BV(COM2A0);
-  TCCR2A &= ~(_BV(COM2B1) | _BV(COM2B0));
+  // Do non-inverting PWM on pin OC0A (p.155)
+  // On the Arduino this is pin 6.
+  TCCR0A = (TCCR0A | _BV(COM0A1)) & ~_BV(COM0A0);
+  TCCR0A &= ~(_BV(COM0B1) | _BV(COM0B0));
   
   // No prescaler (p.158)
-  TCCR2B = (TCCR2B & ~(_BV(CS12) | _BV(CS11))) | _BV(CS10);
+  TCCR0B = (TCCR0B & ~(_BV(CS02) | _BV(CS01))) | _BV(CS00);
   
   // Set initial pulse width to the first sample.
-  OCR2A = pgm_read_byte(&sounddata_data[0]);
+  OCR0A = pgm_read_byte(&sounddata_data[0]);
   
   
   // Set up Timer 1 to send a sample every interrupt.
