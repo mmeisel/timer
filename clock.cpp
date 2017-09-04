@@ -1,13 +1,13 @@
 #include <Arduino.h>
 #include <util/atomic.h>
-#include "stopwatch.h"
+#include "clock.h"
 
 // Based on http://www.embedds.com/avr-timer2-asynchronous-mode/
 
 #define UNDEFINED -1L
 
 // TODO: move to some common header
-#define DEBUG 1
+// #define DEBUG 1
 
 namespace {
     volatile unsigned secondsRemaining_ = 0;
@@ -66,7 +66,7 @@ namespace {
     }
 }
 
-namespace stopwatch {
+namespace clock {
     void stabilize() {
         ready_ = false;
         pause();

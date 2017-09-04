@@ -1,7 +1,7 @@
-#ifndef __TIMER_STOPWATCH_H__
-#define __TIMER_STOPWATCH_H__
+#ifndef __TIMER_CLOCK_H__
+#define __TIMER_CLOCK_H__
 
-namespace stopwatch {
+namespace clock {
     void stabilize();
     void reset(unsigned seconds);
     void pause();
