@@ -10,7 +10,7 @@
 // #define DEBUG 1
 
 namespace {
-    volatile unsigned secondsRemaining_ = 0;
+    volatile unsigned time_ = 0;
     bool ready_ = false;
     void (*userFn_)(void) = nullptr;
 
@@ -21,10 +21,9 @@ namespace {
     // Overflow ISR
     ISR(TIMER2_OVF_vect) {
         if (ready_) {
-            // Normal countdown operation
-            if (secondsRemaining_ > 0) {
-                secondsRemaining_--;
-            }
+            // Normal operation
+            time_++;
+
             if (userFn_) {
                 userFn_();
             }
@@ -66,7 +65,38 @@ namespace {
     }
 }
 
+
+
 namespace clock {
+    Stopwatch::Stopwatch() : endTime_(0), running_(false) {
+    }
+
+    // Must only be called when the clock is paused!
+    Stopwatch::Stopwatch(unsigned seconds) : endTime_(time_ + seconds), running_(true) {
+    }
+
+    unsigned Stopwatch::remaining() {
+        if (running_) {
+            unsigned curTime;
+
+            ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+                curTime = time_;
+            }
+
+            long secondsRemaining = (long) (endTime_ - curTime);
+
+            if (secondsRemaining > 0) {
+                return (unsigned) secondsRemaining;
+            }
+            else {
+                running_ = false;
+            }
+        }
+        return 0U;
+    }
+
+
+
     void stabilize() {
         ready_ = false;
         pause();
@@ -106,27 +136,34 @@ namespace clock {
         Serial.flush();
 #endif
 
-        // Don't do anything else until reset() is called
+        // Prepare for normal operation, but don't do anything else until stopwatch() or resume()
+        // is called
         pause();
+        // Set prescaler to 128 (32768 / 256), which gives an overflow every second
+        init_(0x5);
+        ready_ = true;
     }
 
-    void reset(unsigned seconds) {
-        pause();
+    Stopwatch stopwatch(unsigned seconds, bool syncClock) {
+        Stopwatch output;
 
-        secondsRemaining_ = seconds;
+        // Only return a running stopwatch if the clock is ready
+        if (ready_) {
+            pause();
 
-        if (!ready_) {
-            // Set prescaler to 128 (32768 / 256), which gives an overflow every second
-            init_(0x5);
-            ready_ = true;
+            if (syncClock) {
+                // Reset initial counter value
+                TCNT2 = 0;
+                // Wait for register to update
+                while (ASSR & bit(TCN2UB));
+            }
+
+            output = Stopwatch(seconds);
+
+            resume();
         }
 
-        // Reset initial counter value
-        TCNT2 = 0;
-        // Wait for register to update
-        while (ASSR & bit(TCN2UB));
-
-        resume();
+        return output;
     }
 
     void pause() {
@@ -139,16 +176,6 @@ namespace clock {
         TIFR2 = bit(TOV2);
         // Enable Timer2 overflow interrupt
         TIMSK2 = bit(TOIE2);
-    }
-
-    unsigned remaining() {
-        unsigned secondsRemaining;
-
-        ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-            secondsRemaining = secondsRemaining_;
-        }
-
-        return secondsRemaining;
     }
 
     void attachInterrupt(void (*userFn)(void)) {

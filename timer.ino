@@ -1,8 +1,10 @@
 #include <LowPower.h>
 #include "adc.h"
+#include "audio.h"
+#include "clock.h"
 #include "motor.h"
+#include "PCM.h"
 #include "stop.h"
-#include "stopwatch.h"
 
 #define DEBUG 1
 
@@ -12,20 +14,23 @@
 #define PIN_DIR1 8
 #define PIN_DIR2 7
 #define PIN_POWER 2   // Needs to be an interruptable pin! (2 or 3)
-#define PIN_BELL 6
 
 // Constants
 #define SIGNIFICANT_POSITION_CHANGE 8
-#define CRYSTAL_STABILIZATION_MS 1000
+#define BELL_REPEAT_SECS 3
 
 
 
 int currentPosition_ = ~0;
 int positionChange_ = 0;
-bool ringing_ = false;
 stop::Stop currentStop_;
 stop::Stop nextStop_;
+clock::Stopwatch stopwatch_;
+
 Motor motor_(PIN_ENABLE, PIN_DIR1, PIN_DIR2);
+
+bool ringing_ = false;
+clock::Stopwatch bellStopwatch_;
 
 volatile bool ticked_ = false;
 
@@ -41,7 +46,7 @@ volatile unsigned int interruptCount_;
 void printReport(const char* message) {
     Serial.print(message);
     Serial.print(F("\n\tremaining="));
-    Serial.print(stopwatch::remaining());
+    Serial.print(stopwatch_.remaining());
     Serial.print(F(" currentStop="));
     Serial.print(currentStop_.index);
     Serial.print(F(" nextStop="));
@@ -75,9 +80,20 @@ void handleTick() {
     ticked_ = true;
 }
 
+void sleep() {
+    if (ringing_) {
+        // We need to leave Timer0 and Timer1 running to output sound, so use idle mode instead
+        LowPower.idle(SLEEP_FOREVER,
+                      ADC_OFF, TIMER2_ON, TIMER1_ON, TIMER0_ON, SPI_OFF, USART0_OFF, TWI_OFF);
+    }
+    else {
+        LowPower.powerSave(SLEEP_FOREVER, ADC_OFF, BOD_OFF, TIMER2_ON);
+    }
+}
+
 void shutdown() {
     motor_.setDirection(MotorDirection::OFF);
-    stopwatch::pause();
+    clock::pause();
 
     if (digitalRead(PIN_POWER) == LOW) {
 #ifdef DEBUG
@@ -135,31 +151,42 @@ void updateMotor() {
 }
 
 void updateBell() {
-    bool newState = nextStop_.index == STOP_INDEX_ZERO;
+    bool shouldRing = nextStop_.index == STOP_INDEX_ZERO;
 
-    if (newState != ringing_) {
-        ringing_ = newState;
-        digitalWrite(PIN_BELL, ringing_ ? HIGH : LOW);
+    if (ringing_ && !shouldRing) {
+        // Set ringing_ to false only when the sound completes
+        ringing_ = isPlaying();
+    }
+    else if (shouldRing) {
+        if (bellStopwatch_.remaining() == 0) {
+#ifdef DEBUG
+            Serial.print(F("DING!\n"));
+            Serial.flush();
+#endif
+            startPlayback(audio::DATA, audio::DATA_SIZE);
+            bellStopwatch_ = clock::stopwatch(BELL_REPEAT_SECS);
+        }
+        ringing_ = true;
     }
 }
 
 void setStopFromPosition() {
     currentStop_ = stop::byPosition(currentPosition_);
     nextStop_ = currentStop_;
-    updateBell();
 
     if (currentStop_.index != STOP_INDEX_OFF) {
-        stopwatch::reset(currentStop_.seconds);
+        stopwatch_ = clock::stopwatch(currentStop_.seconds, true);
         // When resetting the stopwatch, unset ticked_ since any unhandled interrupts are useless
         // now, anyway.
         ticked_ = false;
     }
 
     DEBUG_REPORT("Stop set by human");
+    updateBell();
 }
 
 void checkStopwatch() {
-    unsigned remaining = stopwatch::remaining();
+    unsigned remaining = stopwatch_.remaining();
     int index = nextStop_.index;
 
     // Find the lowest stop with seconds greater than or equal to remaining
@@ -196,7 +223,7 @@ void waitForCrystal() {
     Serial.flush();
 #endif
 
-    stopwatch::stabilize();
+    clock::stabilize();
 }
 
 void setup() {
@@ -208,12 +235,11 @@ void setup() {
     pinMode(PIN_ENABLE, OUTPUT);
     pinMode(PIN_DIR1, OUTPUT);
     pinMode(PIN_DIR2, OUTPUT);
-    pinMode(PIN_BELL, OUTPUT);
     pinMode(PIN_POWER, INPUT_PULLUP);
 
     adc::setPin(PIN_SLIDER_IN);
     stop::createStops();
-    stopwatch::attachInterrupt(handleTick);
+    clock::attachInterrupt(handleTick);
     motor_.setDirection(MotorDirection::OFF);
 
     waitForCrystal();
@@ -247,6 +273,11 @@ void loop() {
         checkStopwatch();
     }
 
+    if (ringing_) {
+        // When the bell is ringing, allow the sound effect to repeat until the state changes
+        updateBell();
+    }
+
     if (motor_.direction() == MotorDirection::OFF) {
         // When the motor isn't running, enter low power operation. If the slider is in the off
         // position, shutdown completely.
@@ -254,7 +285,7 @@ void loop() {
             shutdown();
         }
         else {
-            LowPower.powerSave(SLEEP_FOREVER, ADC_OFF, BOD_OFF, TIMER2_ON);
+            sleep();
         }
     }
 }

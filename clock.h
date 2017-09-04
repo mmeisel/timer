@@ -2,11 +2,24 @@
 #define __TIMER_CLOCK_H__
 
 namespace clock {
+
+    class Stopwatch {
+    public:
+        Stopwatch();
+        unsigned remaining();
+
+    private:
+        explicit Stopwatch(unsigned seconds);
+        unsigned endTime_;
+        bool running_;
+
+        friend Stopwatch stopwatch(unsigned, bool);
+    };
+
     void stabilize();
-    void reset(unsigned seconds);
+    Stopwatch stopwatch(unsigned seconds, bool syncClock = false);
     void pause();
     void resume();
-    unsigned remaining();
     void attachInterrupt(void (*userFn)(void));
     void detachInterrupt();
 }
