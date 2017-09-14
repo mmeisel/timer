@@ -71,9 +71,19 @@ R2 =~ 1kΩ
 R1 =~ 220Ω
 R_E = 1V / 251.667mA = 3.97Ω (Try 2x10 in parallel)
 
+The above calculations were for a Class A amplifier, which is actually more complicated than
+necessary, and also wasteful of power (it constantly has power running through it due to the bias
+voltage). A Class B amplfier is far more efficient (using no power when no sound is being generated)
+and simpler, needing only two transitors. And there is no reduction in audio quality since the
+audio is coming from PWM -- there is no signal in the "dead band", anyway. References:
+http://www.electronics-tutorials.ws/amplifier/amplifier-classes.html
+https://forum.arduino.cc/index.php?topic=164436.0
+
+I'm using the S9012 and S9013 transistors from my kit.
+
 TODO:
-- Caps for DC isolation
+- Draw schematic
 - Use transistor to switch on/off motor controller instead of wiring Vss to enable pin?
 - Use higher resolution for crystal stabilization? (Set a smaller divider on Timer0)
-- Draw schematic
+- Caps for DC isolation?
 - Check timing accuracy
