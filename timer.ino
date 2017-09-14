@@ -17,7 +17,7 @@
 #define PIN_SPEAKER 6   // Can't be changed
 
 // Constants
-#define SIGNIFICANT_POSITION_CHANGE 8
+#define SIGNIFICANT_POSITION_CHANGE STOP_SIZE_NORMAL
 #define BELL_REPEAT_SECS 3
 
 
