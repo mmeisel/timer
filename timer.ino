@@ -14,6 +14,7 @@
 #define PIN_DIR1 8
 #define PIN_DIR2 7
 #define PIN_POWER 2   // Needs to be an interruptable pin! (2 or 3)
+#define PIN_SPEAKER 6   // Can't be changed
 
 // Constants
 #define SIGNIFICANT_POSITION_CHANGE 8
@@ -236,7 +237,9 @@ void setup() {
     pinMode(PIN_DIR1, OUTPUT);
     pinMode(PIN_DIR2, OUTPUT);
     pinMode(PIN_POWER, INPUT_PULLUP);
+    pinMode(PIN_SPEAKER, OUTPUT);
 
+    digitalWrite(PIN_SPEAKER, LOW);
     adc::setPin(PIN_SLIDER_IN);
     stop::createStops();
     clock::attachInterrupt(handleTick);
