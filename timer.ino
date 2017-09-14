@@ -6,7 +6,7 @@
 #include "PCM.h"
 #include "stop.h"
 
-#define DEBUG 1
+//#define DEBUG 1
 
 // Pins
 #define PIN_SLIDER_IN A0
@@ -82,14 +82,7 @@ void handleTick() {
 }
 
 void sleep() {
-    if (ringing_) {
-        // We need to leave Timer0 and Timer1 running to output sound, so use idle mode instead
-        LowPower.idle(SLEEP_FOREVER,
-                      ADC_OFF, TIMER2_ON, TIMER1_ON, TIMER0_ON, SPI_OFF, USART0_OFF, TWI_OFF);
-    }
-    else {
-        LowPower.powerSave(SLEEP_FOREVER, ADC_OFF, BOD_OFF, TIMER2_ON);
-    }
+    LowPower.powerSave(SLEEP_FOREVER, ADC_OFF, BOD_OFF, TIMER2_ON);
 }
 
 void shutdown() {
@@ -148,18 +141,19 @@ void updateMotor() {
         motor_.setDirection(MotorDirection::OFF);
         currentStop_ = nextStop_;
         DEBUG_REPORT("Motor off");
+        updateBell();
     }
 }
 
 void updateBell() {
-    bool shouldRing = nextStop_.index == STOP_INDEX_ZERO;
+    bool shouldRing = currentStop_.index == STOP_INDEX_ZERO;
 
     if (ringing_ && !shouldRing) {
         // Set ringing_ to false only when the sound completes
         ringing_ = isPlaying();
     }
     else if (shouldRing) {
-        if (bellStopwatch_.remaining() == 0) {
+        if (!ringing_ || bellStopwatch_.remaining() == 0) {
 #ifdef DEBUG
             Serial.print(F("DING!\n"));
             Serial.flush();
@@ -211,7 +205,6 @@ void checkStopwatch() {
         nextStop_ = stop::byIndex(index);
         // The DEBUG_REPORT is here instead of the above block so nextStop is printed correctly
         DEBUG_REPORT("");
-        updateBell();
         updateMotor();
     }
 }
@@ -253,6 +246,13 @@ void setup() {
 }
 
 void loop() {
+    while (isPlaying()) {
+        // Don't do anything but play the sound. Use idle mode so we can leave Timer0 and Timer1
+        // running to output sound.
+        LowPower.idle(SLEEP_FOREVER, ADC_OFF, TIMER2_ON, TIMER1_ON, TIMER0_ON,
+                      SPI_OFF, USART0_OFF, TWI_OFF);
+    }
+
     adc::startAndSleep();
 
     if (updatePosition()) {
