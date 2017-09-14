@@ -69,6 +69,7 @@ unsigned char const *sounddata_data=0;
 int sounddata_length=0;
 volatile uint16_t sample;
 byte lastSample;
+char playing = 0;
 uint8_t prev_TCCR0A;
 uint8_t prev_TCCR0B;
 uint8_t prev_OCR0A;
@@ -121,6 +122,7 @@ void startPlayback(unsigned char const *data, int length)
   // Set initial pulse width to the first sample.
   OCR0A = pgm_read_byte(&sounddata_data[0]);
   
+  playing = 1;
   
   // Set up Timer 1 to send a sample every interrupt.
   
@@ -161,10 +163,11 @@ void stopPlayback()
   OCR0A = prev_OCR0A;
 
   digitalWrite(speakerPin, LOW);
+
+  playing = 0;
 }
 
-int isPlaying()
+char isPlaying()
 {
-  // Just check if the Timer1 output compare interrupt is enabled
-  return TIMSK1 & _BV(OCIE1A);
+  return playing;
 }

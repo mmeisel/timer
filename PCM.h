@@ -57,7 +57,7 @@ extern "C" {
 
 void startPlayback(unsigned char const *data, int length);
 void stopPlayback();
-int isPlaying();
+char isPlaying();
 
 #ifdef __cplusplus
 }
