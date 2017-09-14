@@ -72,5 +72,8 @@ R1 =~ 220Ω
 R_E = 1V / 251.667mA = 3.97Ω (Try 2x10 in parallel)
 
 TODO:
+- Caps for DC isolation
+- Use transistor to switch on/off motor controller instead of wiring Vss to enable pin?
+- Use higher resolution for crystal stabilization? (Set a smaller divider on Timer0)
 - Draw schematic
 - Check timing accuracy
