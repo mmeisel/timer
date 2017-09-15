@@ -21,6 +21,7 @@ namespace clock {
     Stopwatch stopwatch(unsigned seconds, bool syncClock = false);
     void pause();
     void resume();
+    void prepareForSleep();
     void attachInterrupt(void (*userFn)(void));
     void detachInterrupt();
 }

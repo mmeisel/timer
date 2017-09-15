@@ -80,6 +80,7 @@ void handleTick() {
 }
 
 void sleep() {
+    clock::prepareForSleep();
     LowPower.powerSave(SLEEP_FOREVER, ADC_OFF, BOD_OFF, TIMER2_ON);
 }
 

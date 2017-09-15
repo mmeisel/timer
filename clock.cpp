@@ -71,10 +71,11 @@ namespace {
             // prescaler to 128 (32768 / 256), which gives an overflow every second
             TCCR2A = 0;
             TCCR2B = bit(CS22) | bit(CS20);
+            OCR2A = 0;
         }
 
         // Wait for registers to update
-        while (ASSR & (bit(TCR2BUB) | bit(TCR2AUB) | bit(TCN2UB)));
+        while (ASSR & (bit(TCR2BUB) | bit(TCR2AUB) | bit(TCN2UB) | bit(OCR2AUB)));
 
         // Reset prescaler and wait for it to finish
         GTCCR |= bit(PSRASY);
@@ -214,6 +215,13 @@ namespace clock {
         TIFR2 = bit(TOV2);
         // Enable Timer2 overflow interrupt
         TIMSK2 = bit(TOIE2);
+    }
+
+    void prepareForSleep() {
+        // See ATmega328 datasheet, page 201
+        OCR2A = 0;
+        while (ASSR & bit(OCR2AUB));
+
     }
 
     void attachInterrupt(void (*userFn)(void)) {
