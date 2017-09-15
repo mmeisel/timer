@@ -94,13 +94,7 @@ namespace clock {
 
     unsigned Stopwatch::remaining() {
         if (running_) {
-            unsigned curTime;
-
-            ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-                curTime = time_;
-            }
-
-            int secondsRemaining = (int) (endTime_ - curTime);
+            int secondsRemaining = (int) (endTime_ - clock::time());
 
             if (secondsRemaining > 0) {
                 return (unsigned) secondsRemaining;
@@ -176,6 +170,16 @@ namespace clock {
         // Disable Timer0 interrupts
         TIMSK0 = 0;
         ready_ = true;
+    }
+
+    unsigned time() {
+        unsigned curTime;
+
+        ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+            curTime = time_;
+        }
+
+        return curTime;
     }
 
     Stopwatch stopwatch(unsigned seconds, bool syncClock) {

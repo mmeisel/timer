@@ -17,6 +17,7 @@ namespace clock {
     };
 
     void stabilize();
+    unsigned time();
     Stopwatch stopwatch(unsigned seconds, bool syncClock = false);
     void pause();
     void resume();
