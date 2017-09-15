@@ -56,8 +56,6 @@ void printReport(const char* message) {
     Serial.print(currentPosition_);
     Serial.print(F(" interruptCount="));
     Serial.print(interruptCount_);
-    Serial.print(F(" millisAwake="));
-    Serial.print(millis());
     Serial.print(F("\n"));
     Serial.flush();
 }
