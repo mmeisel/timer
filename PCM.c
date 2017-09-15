@@ -70,9 +70,6 @@ int sounddata_length=0;
 volatile uint16_t sample;
 byte lastSample;
 char playing = 0;
-uint8_t prev_TCCR0A;
-uint8_t prev_TCCR0B;
-uint8_t prev_OCR0A;
 
 // This is called at 8000 Hz to load the next sample.
 ISR(TIMER1_COMPA_vect) {
@@ -99,14 +96,9 @@ void startPlayback(unsigned char const *data, int length)
 
   pinMode(speakerPin, OUTPUT);
   
-  // Set up Timer 0 to do pulse width modulation on the speaker pin.
-  // Since this is used by millis(), restore its previous setup once
-  // playback is complete.
+  // Set up Timer 0 to do pulse width modulation on the speaker
+  // pin.
 
-  prev_TCCR0A = TCCR0A;
-  prev_TCCR0B = TCCR0B;
-  prev_OCR0A = OCR0A;
-  
   // Set fast PWM mode  (p.157)
   TCCR0A |= _BV(WGM01) | _BV(WGM00);
   TCCR0B &= ~_BV(WGM02);
@@ -157,10 +149,8 @@ void stopPlayback()
   // Disable the per-sample timer completely.
   TCCR1B &= ~_BV(CS10);
   
-  // Restore Timer0 to previous state
-  TCCR0A = prev_TCCR0A;
-  TCCR0B = prev_TCCR0B;
-  OCR0A = prev_OCR0A;
+  // Disable the PWM timer.
+  TCCR0B &= ~_BV(CS00);
 
   digitalWrite(speakerPin, LOW);
 
