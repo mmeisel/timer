@@ -83,7 +83,7 @@ namespace clock {
                 curTime = time_;
             }
 
-            long secondsRemaining = (long) (endTime_ - curTime);
+            int secondsRemaining = (int) (endTime_ - curTime);
 
             if (secondsRemaining > 0) {
                 return (unsigned) secondsRemaining;
