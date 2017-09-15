@@ -10,7 +10,8 @@
 
 // Pins
 #define PIN_SLIDER_IN A0
-#define PIN_ENABLE 5
+#define PIN_MOTOR_ENABLE 5
+#define PIN_MOTOR_OFF 12
 #define PIN_DIR1 8
 #define PIN_DIR2 7
 #define PIN_POWER 2   // Needs to be an interruptable pin! (2 or 3)
@@ -28,7 +29,7 @@ stop::Stop currentStop_;
 stop::Stop nextStop_;
 clock::Stopwatch stopwatch_;
 
-Motor motor_(PIN_ENABLE, PIN_DIR1, PIN_DIR2);
+Motor motor_(PIN_MOTOR_OFF, PIN_MOTOR_ENABLE, PIN_DIR1, PIN_DIR2);
 
 bool ringing_ = false;
 clock::Stopwatch bellStopwatch_;
@@ -225,7 +226,7 @@ void setup() {
     Serial.begin(57600);
 #endif
 
-    pinMode(PIN_ENABLE, OUTPUT);
+    pinMode(PIN_MOTOR_ENABLE, OUTPUT);
     pinMode(PIN_DIR1, OUTPUT);
     pinMode(PIN_DIR2, OUTPUT);
     pinMode(PIN_POWER, INPUT_PULLUP);
