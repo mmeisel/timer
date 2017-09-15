@@ -67,7 +67,7 @@
 int speakerPin = 6;
 unsigned char const *sounddata_data=0;
 int sounddata_length=0;
-volatile uint16_t sample;
+volatile int sample;
 byte lastSample;
 char playing = 0;
 
@@ -99,17 +99,10 @@ void startPlayback(unsigned char const *data, int length)
   // Set up Timer 0 to do pulse width modulation on the speaker
   // pin.
 
-  // Set fast PWM mode  (p.157)
-  TCCR0A |= _BV(WGM01) | _BV(WGM00);
-  TCCR0B &= ~_BV(WGM02);
-  
-  // Do non-inverting PWM on pin OC0A (p.155)
-  // On the Arduino this is pin 6.
-  TCCR0A = (TCCR0A | _BV(COM0A1)) & ~_BV(COM0A0);
-  TCCR0A &= ~(_BV(COM0B1) | _BV(COM0B0));
-  
-  // No prescaler (p.158)
-  TCCR0B = (TCCR0B & ~(_BV(CS02) | _BV(CS01))) | _BV(CS00);
+  // Set fast PWM mode (p.157), no prescaler (p.158)
+  // Do non-inverting PWM on pin OC0A (p.155) on the Arduino this is pin 6.
+  TCCR0A = _BV(COM0A1) | _BV(WGM01) | _BV(WGM00);
+  TCCR0B = _BV(CS00);
   
   // Set initial pulse width to the first sample.
   OCR0A = pgm_read_byte(&sounddata_data[0]);
@@ -120,13 +113,10 @@ void startPlayback(unsigned char const *data, int length)
   
   cli();
   
-  // Set CTC mode (Clear Timer on Compare Match) (p.133)
+  // Set CTC mode (Clear Timer on Compare Match) (p.133), no prescaler (p.134)
   // Have to set OCR1A *after*, otherwise it gets reset to 0!
-  TCCR1B = (TCCR1B & ~_BV(WGM13)) | _BV(WGM12);
-  TCCR1A = TCCR1A & ~(_BV(WGM11) | _BV(WGM10));
-  
-  // No prescaler (p.134)
-  TCCR1B = (TCCR1B & ~(_BV(CS12) | _BV(CS11))) | _BV(CS10);
+  TCCR1A = 0;
+  TCCR1B = _BV(WGM12) | _BV(CS10);
   
   // Set the compare register (OCR1A).
   // OCR1A is a 16-bit register, so we have to do this with
@@ -134,7 +124,10 @@ void startPlayback(unsigned char const *data, int length)
   OCR1A = F_CPU / SAMPLE_RATE;    // 16e6 / 8000 = 2000
   
   // Enable interrupt when TCNT1 == OCR1A (p.136)
-  TIMSK1 |= _BV(OCIE1A);
+  TIMSK1 = _BV(OCIE1A);
+
+  // Disable interrupts for Timer0
+  TIMSK0 = 0;
   
   lastSample = pgm_read_byte(&sounddata_data[sounddata_length-1]);
   sample = 0;
@@ -144,13 +137,13 @@ void startPlayback(unsigned char const *data, int length)
 void stopPlayback()
 {
   // Disable playback per-sample interrupt.
-  TIMSK1 &= ~_BV(OCIE1A);
+  TIMSK1 = 0;
   
   // Disable the per-sample timer completely.
-  TCCR1B &= ~_BV(CS10);
+  TCCR1B = 0;
   
   // Disable the PWM timer.
-  TCCR0B &= ~_BV(CS00);
+  TCCR0B = 0;
 
   digitalWrite(speakerPin, LOW);
 
