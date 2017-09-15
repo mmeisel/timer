@@ -16,9 +16,33 @@ namespace {
 
     volatile long average_ = UNDEFINED;
     volatile long deviation_ = UNDEFINED;
-    volatile unsigned long lastMillis_ = 0;
+    volatile unsigned long ticks_ = 0;
+    volatile unsigned long lastTicks_ = 0;
 
-    // Overflow ISR
+    // Compare match ISRs, used only in stabilization mode
+    ISR(TIMER0_COMPB_vect) {
+        ticks_++;
+    }
+
+    ISR(TIMER2_COMPB_vect) {
+        unsigned long curTicks = ticks_;
+        long ticksPast = (long) (curTicks - lastTicks_);
+        long diff = ticksPast - average_;
+
+        if (average_ == UNDEFINED) {
+            average_ = ticksPast;
+            // Leave deviation_ UNDEFINED
+        }
+        else {
+            // Jacobson-Karels TCP RTT algorithm
+            average_ += diff >> 3;
+            deviation_ += (abs(diff) - deviation_) >> 2;
+        }
+
+        lastTicks_ = curTicks;
+    }
+
+    // Timer2 overflow ISR, used in normal operation
     ISR(TIMER2_OVF_vect) {
         if (ready_) {
             // Normal operation
@@ -28,36 +52,29 @@ namespace {
                 userFn_();
             }
         }
-        else {
-            // Stabilization mode
-            unsigned long curMillis = millis();
-            long millisPast = (long) (curMillis - lastMillis_);
-            long diff = millisPast - average_;
-
-            if (average_ == UNDEFINED) {
-                average_ = millisPast;
-                deviation_ = abs(diff);
-            }
-            else {
-                // Jacobson-Karels TCP RTT algorithm
-                average_ += diff >> 3;
-                deviation_ += (abs(diff) - deviation_) >> 2;
-            }
-
-            lastMillis_ = curMillis;
-        }
     }
 
-    void init_(uint8_t prescaler) {
+    void init_(bool stabilizationMode) {
         // Enable asynchronous mode using the watch crystal
         ASSR = bit(AS2);
-        // Disable compare output, use normal waveform generation mode (counter), and set the
-        // prescaler value
-        TCCR2A = 0;
-        TCCR2B = prescaler & 0x7;
+
+        if (stabilizationMode) {
+            // Clear timer on compare match (comparison value of 63) with prescaler of 8. This
+            // gives a compare match every 15,625 us (125 * 125).
+            TCCR2A = bit(WGM21);
+            TCCR2B = bit(CS21);
+            OCR2A = 63;
+            TCNT2 = 0;
+        }
+        else {
+            // Disable compare output, use normal waveform generation mode (counter), and set the
+            // prescaler to 128 (32768 / 256), which gives an overflow every second
+            TCCR2A = 0;
+            TCCR2B = bit(CS22) | bit(CS20);
+        }
 
         // Wait for registers to update
-        while (ASSR & (bit(TCR2BUB) | bit(TCR2AUB)));
+        while (ASSR & (bit(TCR2BUB) | bit(TCR2AUB) | bit(TCN2UB)));
 
         // Reset prescaler and wait for it to finish
         GTCCR |= bit(PSRASY);
@@ -101,13 +118,26 @@ namespace clock {
         ready_ = false;
         pause();
 
-        // Don't prescale so we can get as many samples as possible
-        init_(0x1);
+        // Set up Timer0 for comparison with internal oscillator
+        // Clear timer on compare match (comparison value of 124) with prescaler of 8. This gives
+        // a compare match every 125 us (for an 8 MHz clock).
+        TCCR0A = bit(WGM01);
+        TCCR0B = bit(CS01);
+        OCR0A = 124;
+        TCNT0 = 0;
 
-        // Use the interrupt to track the deviation and wait for it to stabilize
+        // Don't prescale so we can get as many samples as possible
+        init_(true);
+
+        // Start both timers, use the interrupt to track the deviation and wait for it to stabilize
         average_ = UNDEFINED;
         deviation_ = UNDEFINED;
-        resume();
+
+        TIFR0 = bit(OCF0B);
+        TIMSK0 = bit(OCIE0B);
+
+        TIFR2 = bit(OCF2B);
+        TIMSK2 = bit(OCIE2B);
 
 #ifdef DEBUG
         long debugLastDeviation = deviation_;
@@ -120,6 +150,8 @@ namespace clock {
                 Serial.print(average_);
                 Serial.print(F(" deviation="));
                 Serial.print(deviation_);
+                Serial.print(F(" ticks="));
+                Serial.print(ticks_);
                 Serial.print(F("\n"));
                 Serial.flush();
                 debugLastDeviation = deviation_;
@@ -139,8 +171,10 @@ namespace clock {
         // Prepare for normal operation, but don't do anything else until stopwatch() or resume()
         // is called
         pause();
-        // Set prescaler to 128 (32768 / 256), which gives an overflow every second
-        init_(0x5);
+        init_(false);
+
+        // Disable Timer0 interrupts
+        TIMSK0 = 0;
         ready_ = true;
     }
 

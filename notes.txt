@@ -84,6 +84,4 @@ I'm using the S9012 and S9013 transistors from my kit.
 TODO:
 - Draw schematic
 - Use transistor to switch on/off motor controller instead of wiring Vss to enable pin?
-- Use higher resolution for crystal stabilization? (Set a smaller divider on Timer0)
 - Caps for DC isolation?
-- Check timing accuracy
