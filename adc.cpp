@@ -40,17 +40,21 @@ namespace adc {
     }
 
     void start() {
-        preflightCheck_();
-        isRunning_ = true;
-        // Start the conversion
-        bitSet(ADCSRA, ADSC);
+        if (!isRunning_) {
+            preflightCheck_();
+            isRunning_ = true;
+            // Start the conversion
+            bitSet(ADCSRA, ADSC);
+        }
     }
 
     void startAndSleep(bool enableTimer2) {
         preflightCheck_();
         isRunning_ = true;
-        // ADC noise reduction mode starts the conversion automatically if the ADC is on
-        LowPower.adcNoiseReduction(SLEEP_FOREVER, ADC_ON, enableTimer2 ? TIMER2_ON : TIMER2_OFF);
+        // Idle and ADC noise reduction modes start the conversion automatically if the ADC is on.
+        // Use idle rather than adcNoiseReduction as it does not interfere with Timer2 interrupts.
+        LowPower.idle(SLEEP_FOREVER, ADC_ON, TIMER2_ON, TIMER1_OFF, TIMER0_OFF,
+                      SPI_OFF, USART0_OFF, TWI_OFF);
     }
 
     int read() {
