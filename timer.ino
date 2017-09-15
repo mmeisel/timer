@@ -240,7 +240,6 @@ void setup() {
 
     currentPosition_ = adc::read();
     setStopFromPosition();
-    updateMotor();
 }
 
 void loop() {
