@@ -84,4 +84,5 @@ I'm using the S9012 and S9013 transistors from my kit.
 TODO:
 - Draw schematic
 - Use transistor to switch on/off motor controller instead of wiring Vss to enable pin?
+- Audio pop just before playing sample
 - Caps for DC isolation?
