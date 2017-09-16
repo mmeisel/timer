@@ -104,9 +104,6 @@ void startPlayback(unsigned char const *data, int length)
   TCCR0A = _BV(COM0A1) | _BV(WGM01) | _BV(WGM00);
   TCCR0B = _BV(CS00);
   
-  // Set initial pulse width to the first sample.
-  OCR0A = pgm_read_byte(&sounddata_data[0]);
-  
   playing = 1;
   
   // Set up Timer 1 to send a sample every interrupt.
