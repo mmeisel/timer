@@ -1,2 +1,4 @@
 .DS_Store
 *.hex
+*.bak
+*.kicad_pcb-bak
