@@ -398,7 +398,7 @@
     (fp_text reference R2 (at 5.08 -2.54 270) (layer F.SilkS)
       (effects (font (size 1 1) (thickness 0.15)))
     )
-    (fp_text value 47kΩ (at 5.08 -2.54 450) (layer F.Fab)
+    (fp_text value 68kΩ (at 5.08 -2.54 450) (layer F.Fab)
       (effects (font (size 1 1) (thickness 0.15)))
     )
     (fp_line (start 1.93 -1.25) (end 1.93 1.25) (layer F.Fab) (width 0.1))

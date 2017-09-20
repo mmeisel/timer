@@ -1,7 +1,7 @@
 (export (version D)
   (design
     (source /Users/michael/Documents/Arduino/timer/cad/timer.sch)
-    (date "Tuesday, September 19, 2017 'PMt' 07:09:26 PM")
+    (date "Wednesday, September 20, 2017 'PMt' 03:32:12 PM")
     (tool "Eeschema 4.0.7")
     (sheet (number 1) (name /) (tstamps /)
       (title_block
@@ -28,7 +28,7 @@
       (sheetpath (names /) (tstamps /))
       (tstamp 59BEE84B))
     (comp (ref R2)
-      (value 47kΩ)
+      (value 68kΩ)
       (footprint Resistors_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal)
       (libsource (lib device) (part R))
       (sheetpath (names /) (tstamps /))
@@ -349,14 +349,14 @@
   (libraries
     (library (logical device)
       (uri "/Library/Application Support/kicad/library/device.lib"))
-    (library (logical atmel)
-      (uri "/Library/Application Support/kicad/library/atmel.lib"))
     (library (logical transistors)
       (uri "/Library/Application Support/kicad/library/transistors.lib"))
     (library (logical conn)
       (uri "/Library/Application Support/kicad/library/conn.lib"))
     (library (logical linear)
       (uri "/Library/Application Support/kicad/library/linear.lib"))
+    (library (logical atmel)
+      (uri "/Library/Application Support/kicad/library/atmel.lib"))
     (library (logical motor_drivers)
       (uri "/Library/Application Support/kicad/library/motor_drivers.lib")))
   (nets
