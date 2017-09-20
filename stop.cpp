@@ -32,7 +32,7 @@ namespace stop {
         int numStopTimes = sizeof(STOP_TIMES) / sizeof(uint16_t);
 
         for (int i = 0; i < STOP_COUNT; i++) {
-            int startPos = STOP_SIZE_SPECIAL * 2 + STOP_SIZE_NORMAL * i;
+            int startPos = STOP_SIZE_OFF + STOP_SIZE_NORMAL * (i + 1);
             int stopIndex = i >= numStopTimes ? (numStopTimes - 1) : i;
             uint16_t stopTime = pgm_read_word(&(STOP_TIMES[stopIndex]));
 
@@ -60,14 +60,14 @@ namespace stop {
         }
 
         // The first two stops are "special" stops: off and zero, respectively.
-        if (position < STOP_SIZE_SPECIAL) {
+        if (position < STOP_SIZE_OFF) {
             return STOP_OFF;
         }
         
-        if (position < STOP_SIZE_SPECIAL * 2) {
+        if (position < STOP_SIZE_OFF + STOP_SIZE_NORMAL) {
             return STOP_ZERO;
         }
 
-        return stops_[(position - STOP_SIZE_SPECIAL * 2) / STOP_SIZE_NORMAL];
+        return stops_[(position - STOP_SIZE_OFF - STOP_SIZE_NORMAL) / STOP_SIZE_NORMAL];
     }
 }
