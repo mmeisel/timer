@@ -82,5 +82,4 @@ https://forum.arduino.cc/index.php?topic=164436.0
 I'm using the S9012 and S9013 transistors from my kit.
 
 TODO:
-- Draw schematic
-- Caps for DC isolation?
+- STOP_DETENTE_SIZE -- helping or hurting?

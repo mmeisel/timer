@@ -131,8 +131,7 @@ void updateMotor() {
         motor_.setDirection(MotorDirection::FORWARD);
     }
     else if (currentPosition_ > nextStop_.startPosition + STOP_DETENTE_SIZE) {
-        // Normal movement to the next stop. Special case for position 0: make sure the slider gets
-        // all the way down there!
+        // Normal movement to the next stop.
         DEBUG_REPORT_IF(motor_.direction() != MotorDirection::REVERSE, "Motor reverse");
         motor_.setDirection(MotorDirection::REVERSE);
     }
