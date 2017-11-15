@@ -7,7 +7,7 @@
 #define UNDEFINED -1L
 
 // TODO: move to some common header
-// #define DEBUG 1
+//#define DEBUG 1
 
 namespace {
     volatile unsigned time_ = 0;

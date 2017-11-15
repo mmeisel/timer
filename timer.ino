@@ -45,7 +45,7 @@ volatile unsigned int interruptCount_;
 #define DEBUG_REPORT(message) printReport(message)
 #define DEBUG_REPORT_IF(condition, message) ((condition) ? printReport(message) : (void) 0)
 
-void printReport(const char* message) {
+void printReport(const __FlashStringHelper* message) {
     Serial.print(message);
     Serial.print(F("\n\tremaining="));
     Serial.print(stopwatch_.remaining());
@@ -127,19 +127,19 @@ bool updatePosition() {
 void updateMotor() {
     if (currentPosition_ < nextStop_.startPosition) {
         // Handle overshoot
-        DEBUG_REPORT_IF(motor_.direction() != MotorDirection::FORWARD, "Motor forward");
+        DEBUG_REPORT_IF(motor_.direction() != MotorDirection::FORWARD, F("Motor forward"));
         motor_.setDirection(MotorDirection::FORWARD);
     }
     else if (currentPosition_ > nextStop_.startPosition + STOP_DETENTE_SIZE) {
         // Normal movement to the next stop.
-        DEBUG_REPORT_IF(motor_.direction() != MotorDirection::REVERSE, "Motor reverse");
+        DEBUG_REPORT_IF(motor_.direction() != MotorDirection::REVERSE, F("Motor reverse"));
         motor_.setDirection(MotorDirection::REVERSE);
     }
     else {
         // We reached the stop!
         motor_.setDirection(MotorDirection::OFF);
         currentStop_ = nextStop_;
-        DEBUG_REPORT("Motor off");
+        DEBUG_REPORT(F("Motor off"));
         updateBell();
     }
 }
@@ -175,7 +175,7 @@ void setStopFromPosition() {
         ticked_ = false;
     }
 
-    DEBUG_REPORT("Stop set by human");
+    DEBUG_REPORT(F("Stop set by human"));
     updateBell();
 }
 
@@ -190,20 +190,20 @@ void checkStopwatch() {
 
     if (index < nextStop_.index) {
 #ifdef DEBUG
-        Serial.print("Tick ");
+        Serial.print(F("Tick "));
         Serial.print(nextStop_.index);
-        Serial.print(" (");
+        Serial.print(F(" ("));
         Serial.print(nextStop_.seconds);
-        Serial.print(") to ");
+        Serial.print(F(") to "));
         Serial.print(index);
-        Serial.print(" (");
+        Serial.print(F(" ("));
         Serial.print(stop::byIndex(index).seconds);
-        Serial.print(")");
+        Serial.print(F(")"));
 #endif
 
         nextStop_ = stop::byIndex(index);
         // The DEBUG_REPORT is here instead of the above block so nextStop is printed correctly
-        DEBUG_REPORT("");
+        DEBUG_REPORT(F(""));
         updateMotor();
     }
 }
