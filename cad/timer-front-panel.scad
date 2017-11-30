@@ -4,7 +4,7 @@ use <threads.scad>
 PANEL_DEPTH = 2;
 OFF_SIZE = 6400 / 1024;
 STOP_SIZE = 2400 / 1024;
-MARK_DEPTH = 0.2;
+MARK_DEPTH = 0.5;
 
 union() {
     panel();
