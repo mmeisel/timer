@@ -32,27 +32,16 @@ difference() {
     }
 
     // OFF markings
-    color("black")  {
-        translate([-50 + OFF_SIZE / 2, 10.75, 0.75 - MARK_DEPTH])
-        linear_extrude(height=MARK_DEPTH)
-        text(
-            text="OFF",
-            size=2,
-            font="Helvetica Neue:style=Condensed Bold",
-            halign="center",
-            valign="bottom"
-        );
-
-        translate([-50 + OFF_SIZE / 2, -10.75, 0.75 - MARK_DEPTH])
-        linear_extrude(height=MARK_DEPTH)
-        text(
-            text="OFF",
-            size=2,
-            font="Helvetica Neue:style=Condensed Bold",
-            halign="center",
-            valign="top"
-        );
-    }
+    color("black")
+    translate([-50 + OFF_SIZE / 2, 5.5, 0.75 - MARK_DEPTH])
+    linear_extrude(height=MARK_DEPTH)
+    text(
+        text="OFF",
+        size=2,
+        font="Helvetica Neue:style=Condensed Bold",
+        halign="center",
+        valign="center"
+    );
 }
 
 module stopSequence(flip=false) {
@@ -69,7 +58,7 @@ module stopSequence(flip=false) {
                  [36, "45"]])
     {
         translate([params[0] * STOP_SIZE, 0]) {
-            stopMark(length=7, text=params[1], flip=flip);
+            stopMark(length=7, text=flip ? "" : params[1], flip=flip);
         }
     }
     
