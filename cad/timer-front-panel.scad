@@ -70,8 +70,8 @@ module detentes() {
                 [0, 1, 2, 3],   // bottom
                 [4, 1, 0],      // front
                 [4, 5, 2, 1],   // top
-                [5, 2, 3],      // back
-                [4, 5, 3, 0]    // left
+                [5, 3, 2],      // back
+                [4, 0, 3, 5]    // left
             ];
             
             polyhedron(points, faces);
