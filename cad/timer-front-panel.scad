@@ -5,44 +5,85 @@ OFF_SIZE = 6400 / 1024;
 STOP_SIZE = 2400 / 1024;
 MARK_DEPTH = 0.2;
 
-// Panel
-difference() {
-    // The panel itself
-    color("white")
-    cube(size=[170, 52, 1.5], center=true);
+union() {
+    panel();
+    detentes();
+}
 
-    // Center features on the Z axis so they cut all the way through
-    translate([0, 0, -1.5]) {
-        // Mounting screw holes
-        translate([-60, 0]) metric_thread(3, 0.5, 3);
-        translate([60, 0]) metric_thread(3, 0.5, 3);
+module panel() {
+    difference() {
+        // The panel itself
+        color("white")
+        cube(size=[170, 52, 1.5], center=true);
 
-        // Groove for slider
-        hull() {
-            translate([-54, 0]) cylinder(h=3, d=3, $fn=50);
-            translate([54, 0]) cylinder(h=3, d=3, $fn=50);
+        // Center features on the Z axis so they cut all the way through
+        translate([0, 0, -1.5]) {
+            // Mounting screw holes
+            translate([-60, 0]) metric_thread(3, 0.5, 3);
+            translate([60, 0]) metric_thread(3, 0.5, 3);
+
+            // Groove for slider
+            hull() {
+                translate([-54, 0]) cylinder(h=3, d=3, $fn=50);
+                translate([54, 0]) cylinder(h=3, d=3, $fn=50);
+            }
+        }
+
+        // Markings for stops
+        color("black")
+        translate([-50 + OFF_SIZE + STOP_SIZE / 2, 0, 0.75])
+        {
+            translate([0, 1.5]) stopSequence();
+            translate([0, -1.5]) stopSequence(flip=true);
+        }
+
+        // OFF markings
+        color("black")
+        translate([-50 + OFF_SIZE / 2, 5.5, 0.75 - MARK_DEPTH])
+        linear_extrude(height=MARK_DEPTH)
+        text(
+            text="OFF",
+            size=2,
+            font="Helvetica Neue:style=Condensed Bold",
+            halign="center",
+            valign="center"
+        );
+    }
+}
+
+module detentes() {
+    size = 2;
+    // The gap between the panel and the knob is between
+    // 2.2 and 3.2 mm according to the spec sheet.
+    // So nothing above ~2 for the height.
+    height = 1.75;
+    gap = 0.25;
+    xOffset = -50 + OFF_SIZE + STOP_SIZE / 2;
+
+    for (stop=[-1:39]) {
+        color("white")
+        translate([xOffset + stop * STOP_SIZE, -2.5 - size, 0.75])
+        {
+            points = [
+                [gap, 0, 0],
+                [STOP_SIZE - gap, 0, 0],
+                [STOP_SIZE - gap, size, 0],
+                [gap, size, 0],
+                [stop == -1 ? STOP_SIZE / 2 : gap, 0, height],
+                [stop == -1 ? STOP_SIZE / 2 : gap, size, height]
+            ];
+
+            faces = [
+                [0, 1, 2, 3],   // bottom
+                [4, 1, 0],      // front
+                [4, 5, 2, 1],   // top
+                [5, 2, 3],      // back
+                [4, 5, 3, 0]    // left
+            ];
+            
+            polyhedron(points, faces);
         }
     }
-
-    // Markings for stops
-    color("black")
-    translate([-50 + OFF_SIZE + STOP_SIZE / 2, 0, 0.75])
-    {
-        translate([0, 1.5]) stopSequence();
-        translate([0, -1.5]) stopSequence(flip=true);
-    }
-
-    // OFF markings
-    color("black")
-    translate([-50 + OFF_SIZE / 2, 5.5, 0.75 - MARK_DEPTH])
-    linear_extrude(height=MARK_DEPTH)
-    text(
-        text="OFF",
-        size=2,
-        font="Helvetica Neue:style=Condensed Bold",
-        halign="center",
-        valign="center"
-    );
 }
 
 module stopSequence(flip=false) {
