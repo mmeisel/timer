@@ -8,7 +8,8 @@ MARK_DEPTH = 0.2;
 // Panel
 difference() {
     // The panel itself
-    color("white") cube(size=[170, 52, 1.5], center=true);
+    color("white")
+    cube(size=[170, 52, 1.5], center=true);
 
     // Center features on the Z axis so they cut all the way through
     translate([0, 0, -1.5]) {
@@ -47,9 +48,8 @@ difference() {
 module stopSequence(flip=false) {
     // Bold numbers (zero and scale changes)
     for (params=[[0, "0"], [6, "3"], [33, "30"], [39, "60"]]) {
-        translate([params[0] * STOP_SIZE, 0]) {
-            stopMark(length=8, text=params[1], bold=true, flip=flip);
-        }
+        translate([params[0] * STOP_SIZE, 0])
+        stopMark(length=8, text=params[1], bold=true, flip=flip);
     }
 
     // Marked lines
@@ -57,9 +57,8 @@ module stopSequence(flip=false) {
                  [18, "15"], [23, "20"], [28, "25"],
                  [36, "45"]])
     {
-        translate([params[0] * STOP_SIZE, 0]) {
-            stopMark(length=7, text=flip ? "" : params[1], flip=flip);
-        }
+        translate([params[0] * STOP_SIZE, 0])
+        stopMark(length=7, text=flip ? "" : params[1], flip=flip);
     }
     
     // Remaining lines
@@ -69,9 +68,8 @@ module stopSequence(flip=false) {
     {
         length = offset < 6 ? 2 : (offset > 33 ? 5 : 3.5);
 
-        translate([offset * STOP_SIZE, 0]) {
-            stopMark(length=length, flip=flip);
-        }
+        translate([offset * STOP_SIZE, 0])
+        stopMark(length=length, flip=flip);
     }
 }
 
@@ -81,21 +79,18 @@ module stopMark(length=1, text="", bold=false, flip=false) {
     textOffset = flip ? -9 : 9;
     textValign = flip ? "top" : "bottom";
 
-    translate([-width / 2, lineOffset, -MARK_DEPTH]) {
-        cube(size=[width, length, MARK_DEPTH]);
-    }
+    translate([-width / 2, lineOffset, -MARK_DEPTH])
+    cube(size=[width, length, MARK_DEPTH]);
 
     if (text != "") {
         translate([0, textOffset, -MARK_DEPTH])
         linear_extrude(height=MARK_DEPTH)
-        {
-            text(
-                text=text,
-                size=2.5,
-                font=str("Helvetica Neue", bold ? ":style=Bold" : ""),
-                halign="center",
-                valign=textValign
-            );
-        }
+        text(
+            text=text,
+            size=2.5,
+            font=str("Helvetica Neue", bold ? ":style=Bold" : ""),
+            halign="center",
+            valign=textValign
+        );
     }
 }
