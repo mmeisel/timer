@@ -81,5 +81,19 @@ https://forum.arduino.cc/index.php?topic=164436.0
 
 I'm using the S9012 and S9013 transistors from my kit.
 
+After trying with the faceplate, it's clear there needs to be some feedback regarding what you set
+it to, as I originally wanted to do. But the detentes were impossible to get to work reliably. New
+idea: debounce the human-set position, trying to keep the slider in place until the debounce delay
+has passed, at which point try to move it to the current stop. But this has a big problem -- when
+you let go, the motor moving the slider will also change the current stop, making it impossible to
+debounce. Perhaps the debouncing has to only happen in one direction? That is, if the stop is above
+the expected stop, debounce until it either settles or moves downward, at which point set the stop
+immediately. The opposite when the stop moves downward initially.
+
+Electronic feedback just isn't going to work due to the responsiveness issue. I'm going to try
+physical feedback from bumps on the front panel.
+
 TODO:
-- STOP_DETENTE_SIZE -- helping or hurting?
+- Amplifier power spikes -- do I need a resistor in series with the speaker or something?
+- Instead of STOP_DETENTE_SIZE, make sure the motor uses the *middle* of the stop
+
