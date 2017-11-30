@@ -39,15 +39,8 @@ module panel() {
 
         // OFF markings
         color("black")
-        translate([-50 + OFF_SIZE / 2, 5.5, 0.75 - MARK_DEPTH])
-        linear_extrude(height=MARK_DEPTH)
-        text(
-            text="OFF",
-            size=2,
-            font="Helvetica Neue:style=Condensed Bold",
-            halign="center",
-            valign="center"
-        );
+        translate([-50, 1.5, 0.75])
+        offMarks();
     }
 }
 
@@ -133,5 +126,60 @@ module stopMark(length=1, text="", bold=false, flip=false) {
             halign="center",
             valign=textValign
         );
+    }
+}
+
+module offMarks() {
+    xSize = (OFF_SIZE - 1) / 4;
+    ySize = 5.75 / 4;
+
+    translate([0, 1.5, -MARK_DEPTH])
+    linear_extrude(height=MARK_DEPTH)
+    {
+        // Top dots
+        for (xOffset=[0, 2, 4]) {
+            for (yOffset=[0, 2, 4]) {
+                translate([xOffset * xSize, yOffset * ySize])
+                circle(d=xOffset / 4 + 0.5, $fn=50);
+            }
+        }
+
+        for (xOffset=[1, 3]) {
+            for (yOffset=[1, 3]) {
+                translate([xOffset * xSize, yOffset * ySize])
+                circle(d=xOffset == 1 ? 0.5 : 1, $fn=50);
+            }
+        }
+
+        // "OFF" label
+        /*
+        translate([xSize * 2, ySize * 2])
+        text(
+            text="OFF",
+            size=1.75,
+            font="Helvetica Neue:style=Condensed Bold",
+            halign="center",
+            valign="center"
+        );
+        */
+    }
+
+    // Bottom dots
+    translate([0, -10.5, -MARK_DEPTH])
+    linear_extrude(height=MARK_DEPTH)
+    {
+        for (xOffset=[0, 2, 4]) {
+            for (yOffset=[0, 2, 4]) {
+                translate([xOffset * xSize, yOffset * ySize])
+                circle(d=xOffset / 4 + 0.5, $fn=50);
+            }
+        }
+
+        for (xOffset=[1, 3]) {
+            for (yOffset=[1, 3]) {
+                translate([xOffset * xSize, yOffset * ySize])
+                circle(d=xOffset == 1 ? 0.5 : 1, $fn=50);
+            }
+        }
     }
 }
