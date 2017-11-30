@@ -1,6 +1,7 @@
 use <threads.scad>
 
 // Constants
+PANEL_DEPTH = 2;
 OFF_SIZE = 6400 / 1024;
 STOP_SIZE = 2400 / 1024;
 MARK_DEPTH = 0.2;
@@ -14,24 +15,27 @@ module panel() {
     difference() {
         // The panel itself
         color("white")
-        cube(size=[170, 52, 1.5], center=true);
+        cube(size=[170, 52, PANEL_DEPTH], center=true);
 
         // Center features on the Z axis so they cut all the way through
-        translate([0, 0, -1.5]) {
+        translate([0, 0, -PANEL_DEPTH]) {
             // Mounting screw holes
-            translate([-60, 0]) metric_thread(3, 0.5, 3);
-            translate([60, 0]) metric_thread(3, 0.5, 3);
+            translate([-60, 0]) metric_thread(3, 0.5, 2 * PANEL_DEPTH);
+            translate([60, 0]) metric_thread(3, 0.5, 2 * PANEL_DEPTH);
 
             // Groove for slider
             hull() {
-                translate([-54, 0]) cylinder(h=3, d=3, $fn=50);
-                translate([54, 0]) cylinder(h=3, d=3, $fn=50);
+                translate([-54, 0])
+                cylinder(h=PANEL_DEPTH * 2, d=3, $fn=50);
+
+                translate([54, 0])
+                cylinder(h=PANEL_DEPTH * 2, d=3, $fn=50);
             }
         }
 
         // Markings for stops
         color("black")
-        translate([-50 + OFF_SIZE + STOP_SIZE / 2, 0, 0.75])
+        translate([-50 + OFF_SIZE + STOP_SIZE / 2, 0, PANEL_DEPTH / 2])
         {
             translate([0, 1.5]) stopSequence();
             translate([0, -1.5]) stopSequence(flip=true);
@@ -39,7 +43,7 @@ module panel() {
 
         // OFF markings
         color("black")
-        translate([-50, 1.5, 0.75])
+        translate([-50, 1.5, PANEL_DEPTH / 2])
         offMarks();
     }
 }
@@ -55,7 +59,8 @@ module detentes() {
 
     for (stop=[-1:39]) {
         color("white")
-        translate([xOffset + stop * STOP_SIZE, -2.5 - size, 0.75])
+        translate([xOffset + stop * STOP_SIZE, -2.5 - size,
+                   PANEL_DEPTH / 2])
         {
             points = [
                 [gap, 0, 0],
