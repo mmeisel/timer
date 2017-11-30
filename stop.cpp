@@ -4,6 +4,17 @@
 namespace {
     // There can be extra times here, they just won't get used.
     const uint16_t STOP_TIMES[] PROGMEM = {
+        // For 39 stops
+        // Every 30 seconds up to 3 minutes (6 stops)
+        30, 60, 90, 120, 150, 180,
+        // Every minute up to 30 minutes (27 stops)
+        240,  300,  360,  420,  480,  540,  600,  660,  720,
+        780,  840,  900,  960,  1020, 1080, 1140, 1200, 1260,
+        1320, 1380, 1440, 1500, 1560, 1620, 1680, 1740, 1800,
+        // Every 5 minutes up to 1 hour (6 stops)
+        2100, 2400, 2700, 3000, 3300, 3600
+    /*
+        // For 60 stops
         // Every 15 seconds up to 2 minutes
         15, 30, 45, 60, 75, 90, 105, 120,
         // Every 30 seconds up to 5 minutes
@@ -16,6 +27,7 @@ namespace {
         1920, 2040, 2160, 2280, 2400, 2520, 2640, 2760, 2880, 3000, 3120, 3240, 3360, 3480, 3600,
         // Every 20 minutes up to 3 hours
         4800, 6000, 7200, 8400, 9600, 10800
+    */
     /*
         // Every second up to 60 seconds for testing
         1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,

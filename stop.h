@@ -1,8 +1,8 @@
 #ifndef __TIMER_STOP_H__
 #define __TIMER_STOP_H__
 
-#define STOP_SIZE_OFF 48
-#define STOP_SIZE_NORMAL 16
+#define STOP_SIZE_OFF 64    // The absolute max here is 65 with the current resistor setup
+#define STOP_SIZE_NORMAL 24
 #define STOP_COUNT ((1024 - STOP_SIZE_OFF - STOP_SIZE_NORMAL) / STOP_SIZE_NORMAL)
 #define STOP_DETENTE_SIZE 8
 
