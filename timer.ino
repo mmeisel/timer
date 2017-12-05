@@ -125,12 +125,12 @@ bool updatePosition() {
 }
 
 void updateMotor() {
-    if (currentPosition_ < nextStop_.startPosition) {
+    if (currentPosition_ < nextStop_.startPosition + STOP_MARGIN) {
         // Handle overshoot
         DEBUG_REPORT_IF(motor_.direction() != MotorDirection::FORWARD, F("Motor forward"));
         motor_.setDirection(MotorDirection::FORWARD);
     }
-    else if (currentPosition_ > nextStop_.startPosition + STOP_DETENTE_SIZE) {
+    else if (currentPosition_ >= nextStop_.endPosition - STOP_MARGIN) {
         // Normal movement to the next stop.
         DEBUG_REPORT_IF(motor_.direction() != MotorDirection::REVERSE, F("Motor reverse"));
         motor_.setDirection(MotorDirection::REVERSE);

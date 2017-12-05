@@ -4,7 +4,7 @@
 #define STOP_SIZE_OFF 64    // The absolute max here is 65 with the current resistor setup
 #define STOP_SIZE_NORMAL 24
 #define STOP_COUNT ((1024 - STOP_SIZE_OFF - STOP_SIZE_NORMAL) / STOP_SIZE_NORMAL)
-#define STOP_DETENTE_SIZE 8
+#define STOP_MARGIN 8
 
 #define STOP_INDEX_OFF -2
 #define STOP_INDEX_ZERO -1
