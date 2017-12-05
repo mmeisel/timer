@@ -18,7 +18,6 @@
 #define PIN_SPEAKER 6   // Can't be changed
 
 // Constants
-#define SIGNIFICANT_POSITION_CHANGE STOP_SIZE_NORMAL
 #define BELL_REPEAT_SECS 6
 
 
@@ -258,12 +257,11 @@ void loop() {
             // When the motor is moving, just keep going until we hit the desired position.
             updateMotor();
         }
-        else if (positionChange_ >= SIGNIFICANT_POSITION_CHANGE &&
-            (currentPosition_ < currentStop_.startPosition ||
-             currentPosition_ >= currentStop_.endPosition))
+        else if (currentPosition_ < currentStop_.startPosition ||
+                 currentPosition_ >= currentStop_.endPosition)
         {
-            // If the position changed significantly and isn't where we're intending to be, a human
-            // must have moved the slider. If they actually moved it to a new stop, update the stop.
+            // If the slider is at a different stop than it's supposed to be, a human must have
+            // moved it. Update the stop.
             setStopFromPosition();
         }
     }
