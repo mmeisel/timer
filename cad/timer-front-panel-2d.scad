@@ -21,20 +21,20 @@ difference() {
     // Markings for stops
     translate([-50 + OFF_SIZE + STOP_SIZE / 2, 0])
     {
-        translate([0, 4.5]) stopSequence();
-        translate([0, -4.5]) stopSequence(flip=true);
+        translate([0, 3.5]) stopSequence();
+        translate([0, -3.5]) stopSequence(flip=true);
     }
 
     // OFF markings
-    translate([-50, 5.5]) offMarks();
-    translate([-50, -11.5]) offMarks();
+    translate([-50, 4.5]) offMarks();
+    translate([-50, -10.5]) offMarks();
 }
 
 module stopSequence(flip=false) {
     // Bold numbers (zero and scale changes)
     for (params=[[0, "0"], [6, "3"], [33, "30"], [39, "60"]]) {
         translate([params[0] * STOP_SIZE, 0])
-        stopMark(length=8, text=params[1], bold=true, flip=flip);
+        stopMark(length=9, text=params[1], bold=true, flip=flip);
     }
 
     // Marked lines
@@ -43,7 +43,7 @@ module stopSequence(flip=false) {
                  [36, "45"]])
     {
         translate([params[0] * STOP_SIZE, 0])
-        stopMark(length=7, text=flip ? "" : params[1], flip=flip);
+        stopMark(length=8, text=flip ? "" : params[1], flip=flip);
     }
     
     // Remaining lines
@@ -51,7 +51,7 @@ module stopSequence(flip=false) {
                  19, 20, 21, 22, 24, 25, 26, 27, 29, 30, 31,
                  32, 34, 35, 37, 38])
     {
-        length = offset < 6 ? 2 : (offset > 33 ? 5 : 3.5);
+        length = offset < 6 ? 3 : (offset > 33 ? 6 : 4.5);
 
         translate([offset * STOP_SIZE, 0])
         stopMark(length=length, flip=flip);
@@ -61,7 +61,7 @@ module stopSequence(flip=false) {
 module stopMark(length=1, text="", bold=false, flip=false) {
     width = bold ? 0.6 : 0.4;
     lineOffset = flip ? -length : 0;
-    textOffset = flip ? -9 : 9;
+    textOffset = flip ? -10 : 10;
     textValign = flip ? "top" : "bottom";
 
     translate([-width / 2, lineOffset])
