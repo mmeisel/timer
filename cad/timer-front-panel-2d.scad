@@ -26,8 +26,8 @@ difference() {
     }
 
     // OFF markings
-    translate([-50, 4.5]) offMarks();
-    translate([-50, -10.5]) offMarks();
+    translate([-50, 4]) offMarks();
+    translate([-50, -11]) offMarks();
 }
 
 module stopSequence(flip=false) {
@@ -81,7 +81,7 @@ module stopMark(length=1, text="", bold=false, flip=false) {
 
 module offMarks() {
     xSize = (OFF_SIZE - 0.5) / 4;
-    ySize = 6 / 4;
+    ySize = 7 / 4;
 
     // Dots
     for (xOffset=[2:4]) {
