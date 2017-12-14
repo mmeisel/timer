@@ -20,7 +20,7 @@ DOOR_TAB_WIDTH = 16;
 MAGNET_THICKNESS = 4;
 HINGE_HOLE_D = sqrt(2 * THICKNESS * THICKNESS);
 HINGE_HEIGHT = 4 * THICKNESS;
-BOTTOM_DEPTH = DEPTH - HINGE_HOLE_D / 2;
+BOTTOM_DEPTH = DEPTH - HINGE_HOLE_D / 2 - 0.5;    // 0.5mm clearance
 FRONT_HEIGHT = 20;
 TILT_ANGLE = atan2(DEPTH, (FRONT_HEIGHT + HINGE_HOLE_D / 2 -
                            HINGE_HEIGHT / 2));
@@ -90,10 +90,10 @@ module topPanel() {
         fingerCuts(width=WIDTH, startUp=false);
 
         // Cutout for battery door tab
-        translate([(WIDTH - DOOR_TAB_WIDTH) / 2 + KERF,
-                   DEPTH - THICKNESS - MAGNET_THICKNESS + KERF])
-        square([DOOR_TAB_WIDTH - 2 * KERF,
-                THICKNESS + MAGNET_THICKNESS]);
+        translate([(WIDTH - DOOR_TAB_WIDTH) / 2,
+                   DEPTH - THICKNESS - MAGNET_THICKNESS])
+        offset(-KERF)
+        square([DOOR_TAB_WIDTH, 2 * THICKNESS + MAGNET_THICKNESS]);
 
         // Speaker holes
         // TODO: replace with a nice design instead
@@ -152,7 +152,8 @@ module bottomPanel() {
         
         // Cutouts for side features (left)
         intersection() {
-            square([THICKNESS - KERF, BOTTOM_DEPTH]);
+            translate([-KERF, -KERF])
+            square([THICKNESS, 2 * BOTTOM_DEPTH]);
 
             mirror([-1, 1]) union() {
                 frontFoot();
@@ -170,7 +171,7 @@ module bottomPanel() {
         intersection()
         {
             translate([-THICKNESS + KERF, 0])
-            square([THICKNESS, BOTTOM_DEPTH]);
+            square([THICKNESS, 2 * BOTTOM_DEPTH]);
 
             rotate(90) union() {
                 frontFoot();
@@ -215,8 +216,7 @@ module bottomPanel() {
 }
 
 module kerfAdjustedPanel(size=[1, 1]) {
-    translate([-KERF, -KERF])
-    square([size[0] + 2 * KERF, size[1] + 2 * KERF]);
+    offset(KERF) square(size);
 }
 
 module hingeHousing() {
