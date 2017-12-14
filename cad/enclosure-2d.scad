@@ -6,14 +6,16 @@ DETAIL = 50;
 // of material lost on *one side* of a cut.
 KERF = 0.1;
 
-PANEL_WIDTH = 170;
-PANEL_HEIGHT = 52;
-PANEL_DEPTH = 1.5;
+FACE_WIDTH = 170;
+FACE_HEIGHT = 52;
+FACE_DEPTH = 1.5;
 
-WIDTH = PANEL_WIDTH + 2 * THICKNESS;
-HEIGHT = PANEL_HEIGHT + 2 * THICKNESS;
+WIDTH = FACE_WIDTH + 2 * THICKNESS;
+HEIGHT = FACE_HEIGHT + 2 * THICKNESS;
 DEPTH = 80;
 
+INTERIOR_PANEL_DEPTH = THICKNESS * 3;
+INTERIOR_TAB_WIDTH = THICKNESS * 3;
 SPEAKER_DIAMETER = 36;
 PCB_SPACING = 39.37;    // Distance between mounting holes on PCB
 DOOR_TAB_WIDTH = 16;
@@ -44,6 +46,14 @@ sidePanel();
 
 translate([KERF, HEIGHT + DEPTH + 10])
 bottomPanel();
+
+translate([KERF, HEIGHT + 2 * DEPTH + 10])
+interiorPanel();
+
+// TODO: maybe just leave this out?
+translate([KERF, 2 * HEIGHT + 2 * DEPTH + 15])
+frontPanel();
+
 
 // TODO: add signature or something engraved on the bottom
 
@@ -135,6 +145,11 @@ module sidePanel() {
             // Cutout for hinge hole
             translate([DEPTH, HINGE_HOLE_D / 2])
             circle(d=HINGE_HOLE_D + KERF, $fn=DETAIL);
+
+            // Cutout for interior panel tab
+            translate([INTERIOR_PANEL_DEPTH + KERF,
+                       HEIGHT / 2 - INTERIOR_TAB_WIDTH / 2 + KERF])
+            square([THICKNESS, INTERIOR_TAB_WIDTH - 2 * KERF]);
         }
 
         hingeHousing();
@@ -199,6 +214,14 @@ module bottomPanel() {
             }
         }
 
+        // Holes for tabs from interior panel
+        for (xOffset=[WIDTH / 8, WIDTH / 2, 7 * WIDTH / 8]) {
+            translate([xOffset - INTERIOR_TAB_WIDTH / 2 + KERF,
+                       INTERIOR_PANEL_DEPTH + KERF])
+            square([INTERIOR_TAB_WIDTH - 2 * KERF,
+                    THICKNESS - 2 * KERF]);
+        }
+
         // PCB mounting point
         translate([WIDTH - THICKNESS - PCB_SPACING - 20,
                    BOTTOM_DEPTH - THICKNESS - PCB_SPACING - 10])
@@ -212,6 +235,82 @@ module bottomPanel() {
         }
 
         // Battery holder mounting point
+        // TODO
+    }
+}
+
+module frontPanel() {
+    difference() {
+        kerfAdjustedPanel([WIDTH, HEIGHT]);
+
+        // Top
+        translate([0, HEIGHT])
+        fingerCuts(width=WIDTH, startUp=true);
+
+        // Left
+        rotate(90)
+        fingerCuts(width=HEIGHT, startUp=true);
+        
+        // Right
+        translate([WIDTH, HEIGHT])
+        rotate(-90)
+        fingerCuts(width=HEIGHT, startUp=true);
+
+        // Bottom
+        translate([WIDTH, 0])
+        rotate(180)
+        fingerCuts(width=WIDTH, startUp=true);
+
+        // Front panel hole
+        translate([WIDTH / 2, HEIGHT / 2])
+        square([FACE_WIDTH - 12, FACE_HEIGHT - 12], center=true);
+    }
+}
+
+module interiorPanel() {
+    difference() {
+        kerfAdjustedPanel([WIDTH, HEIGHT - THICKNESS]);
+
+        // Side tabs
+        for (xOffset=[-KERF, WIDTH - THICKNESS + KERF]) {
+            translate([xOffset, -KERF])
+            square([THICKNESS,
+                    (HEIGHT - INTERIOR_TAB_WIDTH - KERF) / 2]);
+
+            translate([xOffset, (HEIGHT + INTERIOR_TAB_WIDTH) / 2 - KERF])
+            square([THICKNESS,
+                    (HEIGHT - INTERIOR_TAB_WIDTH - KERF) / 2]);
+        }
+
+        // Bottom tabs, outer cutouts
+        for (xOffset=[-KERF * 2,
+                      7 * WIDTH / 8 + INTERIOR_TAB_WIDTH / 2 + KERF])
+        {
+            translate([xOffset, -KERF])
+            square([WIDTH / 8 - INTERIOR_TAB_WIDTH / 2, THICKNESS]);
+        }
+
+        // Bottom tabs, inner cutouts
+        for (xOffset=[WIDTH / 8 + INTERIOR_TAB_WIDTH / 2 - KERF,
+                      WIDTH / 2 + INTERIOR_TAB_WIDTH / 2 - KERF])
+        {
+            translate([xOffset, -KERF])
+            square([3 * WIDTH / 8 - INTERIOR_TAB_WIDTH - 2 * KERF,
+                    THICKNESS]);
+        }
+
+        // Hole for slider
+        // TODO: get correct measurements
+        translate([WIDTH / 2, HEIGHT / 2])
+        square([120, 20], center=true);
+
+        // Screw holes for face plate
+        for (xOffset=[THICKNESS + 6, WIDTH - THICKNESS - 6]) {
+            for (yOffset=[THICKNESS + 6, HEIGHT - THICKNESS - 6]) {
+                translate([xOffset, yOffset])
+                circle(d=3);
+            }
+        }
     }
 }
 
