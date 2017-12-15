@@ -14,6 +14,8 @@ WIDTH = FACE_WIDTH + 2 * THICKNESS;
 HEIGHT = FACE_HEIGHT + 2 * THICKNESS;
 DEPTH = 80;
 
+WITH_FRONT_PANEL = false;
+
 INTERIOR_PANEL_DEPTH = THICKNESS * 3;
 INTERIOR_TAB_WIDTH = THICKNESS * 3;
 SPEAKER_DIAMETER = 36;
@@ -50,9 +52,10 @@ bottomPanel();
 translate([KERF, HEIGHT + 2 * DEPTH + 10])
 interiorPanel();
 
-// TODO: maybe just leave this out?
-translate([KERF, 2 * HEIGHT + 2 * DEPTH + 15])
-frontPanel();
+if (WITH_FRONT_PANEL) {
+    translate([KERF, 2 * HEIGHT + 2 * DEPTH + 15])
+    frontPanel();
+}
 
 
 // TODO: add signature or something engraved on the bottom
@@ -95,9 +98,11 @@ module topPanel() {
         fingerCuts(width=DEPTH, startUp=true);
 
         // Bottom (front)
-        translate([WIDTH, 0])
-        rotate(180)
-        fingerCuts(width=WIDTH, startUp=false);
+        if (WITH_FRONT_PANEL) {
+            translate([WIDTH, 0])
+            rotate(180)
+            fingerCuts(width=WIDTH, startUp=false);
+        }
 
         // Cutout for battery door tab
         translate([(WIDTH - DOOR_TAB_WIDTH) / 2,
@@ -139,8 +144,10 @@ module sidePanel() {
             fingerCuts(width=BOTTOM_DEPTH, startUp=false);
 
             // Front
-            rotate(90)
-            fingerCuts(width=HEIGHT, startUp=false);
+            if (WITH_FRONT_PANEL) {
+                rotate(90)
+                fingerCuts(width=HEIGHT, startUp=false);
+            }
 
             // Cutout for hinge hole
             translate([DEPTH, HINGE_HOLE_D / 2])
@@ -195,9 +202,11 @@ module bottomPanel() {
         }
 
         // Bottom (front)
-        translate([WIDTH, 0])
-        rotate(180)
-        fingerCuts(width=WIDTH, startUp=false);
+        if (WITH_FRONT_PANEL) {
+            translate([WIDTH, 0])
+            rotate(180)
+            fingerCuts(width=WIDTH, startUp=false);
+        }
 
         intersection() {
             translate([WIDTH - THICKNESS, 0])
