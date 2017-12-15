@@ -20,6 +20,7 @@ INTERIOR_PANEL_DEPTH = THICKNESS * 3;
 INTERIOR_TAB_WIDTH = THICKNESS * 3;
 SPEAKER_DIAMETER = 36;
 PCB_SPACING = 39.37;    // Distance between mounting holes on PCB
+PCB_SIZE = 46.99;
 DOOR_TAB_WIDTH = 16;
 MAGNET_THICKNESS = 4;
 HINGE_HOLE_D = sqrt(2 * THICKNESS * THICKNESS);
@@ -232,8 +233,8 @@ module bottomPanel() {
         }
 
         // PCB mounting point
-        translate([WIDTH - THICKNESS - PCB_SPACING - 20,
-                   BOTTOM_DEPTH - THICKNESS - PCB_SPACING - 10])
+        translate([WIDTH - THICKNESS - PCB_SPACING - 8,
+                   BOTTOM_DEPTH - PCB_SPACING - 8])
         {
             for (xOffset=[0, PCB_SPACING]) {
                 for (yOffset=[0, PCB_SPACING]) {
@@ -241,10 +242,25 @@ module bottomPanel() {
                     circle(d=3, $fn=DETAIL);
                 }
             }
+
+            % translate([(PCB_SIZE - PCB_SPACING) / -2,
+                         (PCB_SIZE - PCB_SPACING) / -2])
+            square(PCB_SIZE);
         }
 
         // Battery holder mounting point
-        // TODO
+        // Screw holes are centered, 56mm apart
+        translate([THICKNESS + (BATTERY_X - 56) / 2 + 4,
+                   BOTTOM_DEPTH - BATTERY_Y / 2 - 3])
+        circle(d=3);
+
+        translate([THICKNESS + (BATTERY_X + 56) / 2 + 4,
+                   BOTTOM_DEPTH - BATTERY_Y / 2 - 3])
+        circle(d=3);
+
+        % translate([THICKNESS + 4,
+                   BOTTOM_DEPTH - BATTERY_Y - 4])
+        square([BATTERY_X, BATTERY_Y]);
     }
 }
 
