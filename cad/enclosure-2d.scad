@@ -325,9 +325,9 @@ module interiorPanel() {
         }
 
         // Hole for slider
-        // TODO: get correct measurements
-        translate([WIDTH / 2, HEIGHT / 2])
-        square([120, 20], center=true);
+        // Measurements come from data sheet, plus some wiggle room
+        translate([WIDTH / 2 - 81, HEIGHT / 2 - 6])
+        square([152, 14]);
 
         // Screw holes for face plate
         for (xOffset=[THICKNESS + 6, WIDTH - THICKNESS - 6]) {
