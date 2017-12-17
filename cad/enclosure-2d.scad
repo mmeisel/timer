@@ -40,21 +40,23 @@ backPanel();
 translate([KERF, HEIGHT + 5])
 topPanel();
 
-translate([WIDTH + 20, FRONT_HEIGHT])
-sidePanel();
-
-translate([WIDTH + DEPTH + 20, HEIGHT + FRONT_HEIGHT + 20])
-mirror()
-sidePanel();
-
 translate([KERF, HEIGHT + DEPTH + 10])
 bottomPanel();
 
-translate([KERF, HEIGHT + 2 * DEPTH + 10])
+translate([KERF, HEIGHT + DEPTH + BOTTOM_DEPTH + 15])
 interiorPanel();
 
+translate([KERF, 2 * HEIGHT + DEPTH + BOTTOM_DEPTH + FRONT_HEIGHT + 10])
+sidePanel();
+
+translate([KERF + WIDTH,
+           2 * HEIGHT + DEPTH + BOTTOM_DEPTH + FRONT_HEIGHT + 10])
+mirror()
+sidePanel();
+
 if (WITH_FRONT_PANEL) {
-    translate([KERF, 2 * HEIGHT + 2 * DEPTH + 15])
+    translate([KERF,
+               2 * HEIGHT + 2 * DEPTH + BOTTOM_DEPTH + 10])
     frontPanel();
 }
 
