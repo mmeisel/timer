@@ -254,11 +254,11 @@ module bottomPanel() {
         // Screw holes are centered, 56mm apart
         translate([THICKNESS + (BATTERY_X - 56) / 2 + 4,
                    BOTTOM_DEPTH - BATTERY_Y / 2 - 3])
-        circle(d=3);
+        circle(d=3, $fn=DETAIL);
 
         translate([THICKNESS + (BATTERY_X + 56) / 2 + 4,
                    BOTTOM_DEPTH - BATTERY_Y / 2 - 3])
-        circle(d=3);
+        circle(d=3, $fn=DETAIL);
 
         % translate([THICKNESS + 4,
                    BOTTOM_DEPTH - BATTERY_Y - 4])
@@ -335,7 +335,7 @@ module interiorPanel() {
         for (xOffset=[THICKNESS + 6, WIDTH - THICKNESS - 6]) {
             for (yOffset=[THICKNESS + 6, HEIGHT - THICKNESS - 6]) {
                 translate([xOffset, yOffset])
-                circle(d=3);
+                circle(d=3, $fn=DETAIL);
             }
         }
     }
