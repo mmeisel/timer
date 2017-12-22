@@ -27,8 +27,8 @@ HINGE_HOLE_D = sqrt(2 * THICKNESS * THICKNESS);
 HINGE_HEIGHT = 4 * THICKNESS;
 BOTTOM_DEPTH = DEPTH - HINGE_HOLE_D / 2 - 0.5;    // 0.5mm clearance
 FRONT_HEIGHT = 20;
-TILT_ANGLE = atan2(DEPTH, (FRONT_HEIGHT + HINGE_HOLE_D / 2 -
-                           HINGE_HEIGHT / 2));
+TILT_ANGLE = atan2(DEPTH - THICKNESS / 2,
+                   (FRONT_HEIGHT + HINGE_HOLE_D / 2 - HINGE_HEIGHT / 2));
 
 BATTERY_X = 110;
 BATTERY_Y = 33;
@@ -153,7 +153,7 @@ module sidePanel() {
             }
 
             // Cutout for hinge hole
-            translate([DEPTH, HINGE_HOLE_D / 2])
+            translate([DEPTH - THICKNESS / 2, HINGE_HOLE_D / 2])
             circle(d=HINGE_HOLE_D + KERF, $fn=DETAIL);
 
             // Cutout for interior panel tab
@@ -346,7 +346,7 @@ module kerfAdjustedPanel(size=[1, 1]) {
 }
 
 module hingeHousing() {
-    translate([DEPTH, HINGE_HOLE_D / 2])
+    translate([DEPTH - THICKNESS / 2, HINGE_HOLE_D / 2])
     difference() {
         union() {
             circle(d=HINGE_HEIGHT + KERF, $fn=DETAIL);
