@@ -28,14 +28,6 @@ difference() {
     // OFF markings
     translate([-50, 4]) offMarks();
     translate([-50, -11]) offMarks();
-
-    // Corner screw holes
-    for (xOffset=[-85 + 6, 85 - 6]) {
-        for (yOffset=[-26 + 6, 26 - 6]) {
-            translate([xOffset, yOffset])
-            circle(d=3, $fn=50);
-        }
-    }
 }
 
 module stopSequence(flip=false) {
