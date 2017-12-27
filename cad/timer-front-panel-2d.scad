@@ -1,6 +1,8 @@
 // Constants
-OFF_SIZE = 6400 / 1024;
-STOP_SIZE = 2400 / 1024;
+// The first and last 2 (+-1) mm of travel don't affect the output
+// according to the datasheet
+OFF_SIZE = 96 * 64 / 1024;
+STOP_SIZE = 96 * 24 / 1024;
 
 // Main panel
 difference() {
@@ -19,15 +21,15 @@ difference() {
     }
 
     // Markings for stops
-    translate([-50 + OFF_SIZE + STOP_SIZE / 2, 0])
+    translate([-48 + OFF_SIZE + STOP_SIZE / 2, 0])
     {
         translate([0, 3.5]) stopSequence();
         translate([0, -3.5]) stopSequence(flip=true);
     }
 
     // OFF markings
-    translate([-50, 4]) offMarks();
-    translate([-50, -11]) offMarks();
+    translate([-48, 4]) offMarks();
+    translate([-48, -11]) offMarks();
 }
 
 module stopSequence(flip=false) {
