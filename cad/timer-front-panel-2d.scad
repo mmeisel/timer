@@ -28,8 +28,8 @@ difference() {
     }
 
     // OFF markings
-    translate([-48, 4]) offMarks();
-    translate([-48, -11]) offMarks();
+    translate([-48, 3.5]) offMarks();
+    translate([-48, -3.5]) offMarks(flip=true);
 }
 
 module stopSequence(flip=false) {
@@ -60,11 +60,14 @@ module stopSequence(flip=false) {
     }
 }
 
-module stopMark(length=1, text="", bold=false, flip=false) {
+module stopMark(length=1, text="", bold=false, small=false, flip=false) {
     width = bold ? 0.6 : 0.4;
     lineOffset = flip ? -length : 0;
-    textOffset = flip ? -11 : 11;
+    textOffsetAmount = small ? 11.25 : 11;
+    textOffset = flip ? -textOffsetAmount : textOffsetAmount;
     textValign = flip ? "top" : "bottom";
+    textStyle = small ? "Condensed Bold" : (bold ? "Bold" : "Regular");
+    textSize = small ? 2.5 : 3;
 
     translate([-width / 2, lineOffset])
     square(size=[width, length]);
@@ -73,34 +76,26 @@ module stopMark(length=1, text="", bold=false, flip=false) {
         translate([0, textOffset])
         text(
             text=text,
-            size=3,
-            font=str("Helvetica Neue", bold ? ":style=Bold" : ""),
+            size=textSize,
+            font=str("Helvetica Neue:style=", textStyle),
             halign="center",
             valign=textValign
         );
     }
 }
 
-module offMarks() {
-    xSize = (OFF_SIZE - 0.5) / 4;
-    ySize = 7 / 4;
+module offMarks(flip=false) {
+    xSize = (OFF_SIZE + STOP_SIZE / 2) / 4;
+    ySize = 7 / (flip ? -4 : 4);
 
     // Dots
-    for (xOffset=[2:4]) {
-        for (yOffset=[0:4]) {
+    for (xOffset=[1:3]) {
+        for (yOffset=[0.5:4.5]) {
             translate([xOffset * xSize, yOffset * ySize])
-            circle(d=xOffset / 4, $fn=50);
+            circle(d=0.75, $fn=50);
         }
     }
 
     // "OFF" label
-    translate([0, ySize * 2])
-    rotate(90)
-    text(
-        text="OFF",
-        size=2,
-        font="Helvetica Neue:style=Bold",
-        halign="center",
-        valign="top"
-    );
+    stopMark(length=9, text="OFF", small=true, bold=true, flip=flip);
 }
