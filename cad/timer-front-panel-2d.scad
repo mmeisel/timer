@@ -16,27 +16,29 @@ difference() {
 
     // Groove for slider
     hull() {
-        translate([-54, 0]) circle(d=3, $fn=50);
-        translate([54, 0]) circle(d=3, $fn=50);
+        // 48mm travel plus 4mm for half the width of the slider
+        // minus half the diameter of the circle
+        translate([-50.5, 0]) circle(d=3, $fn=50);
+        translate([50.5, 0]) circle(d=3, $fn=50);
     }
 
     // Markings for stops
     translate([-48 + OFF_SIZE + STOP_SIZE / 2, 0])
     {
-        translate([0, 3.5]) stopSequence();
-        translate([0, -3.5]) stopSequence(flip=true);
+        translate([0, 5]) stopSequence();
+        translate([0, -5]) stopSequence(flip=true);
     }
 
     // OFF markings
-    translate([-48, 3.5]) offMarks();
-    translate([-48, -3.5]) offMarks(flip=true);
+    translate([-48, 5]) offMarks();
+    translate([-48, -5]) offMarks(flip=true);
 }
 
 module stopSequence(flip=false) {
     // Bold numbers (zero and scale changes)
     for (params=[[0, "0"], [6, "3"], [33, "30"], [39, "60"]]) {
         translate([params[0] * STOP_SIZE, 0])
-        stopMark(length=9, text=params[1], bold=true, flip=flip);
+        stopMark(length=8, text=params[1], bold=true, flip=flip);
     }
 
     // Marked lines
@@ -45,7 +47,7 @@ module stopSequence(flip=false) {
                  [36, "45"]])
     {
         translate([params[0] * STOP_SIZE, 0])
-        stopMark(length=8, text=flip ? "" : params[1], flip=flip);
+        stopMark(length=7, text=flip ? "" : params[1], flip=flip);
     }
     
     // Remaining lines
@@ -53,7 +55,7 @@ module stopSequence(flip=false) {
                  19, 20, 21, 22, 24, 25, 26, 27, 29, 30, 31,
                  32, 34, 35, 37, 38])
     {
-        length = offset < 6 ? 3 : (offset > 33 ? 6 : 4.5);
+        length = offset < 6 ? 2 : (offset > 33 ? 5 : 3.5);
 
         translate([offset * STOP_SIZE, 0])
         stopMark(length=length, flip=flip);
@@ -61,19 +63,19 @@ module stopSequence(flip=false) {
 }
 
 module stopMark(length=1, text="", bold=false, small=false, flip=false) {
-    width = bold ? 0.6 : 0.4;
+    width = bold ? 0.5 : 0.25;
     lineOffset = flip ? -length : 0;
-    textOffsetAmount = small ? 11.25 : 11;
-    textOffset = flip ? -textOffsetAmount : textOffsetAmount;
-    textValign = flip ? "top" : "bottom";
+    textOffset = flip ? -12 : 12;
+    textValign = "center";
     textStyle = small ? "Condensed Bold" : (bold ? "Bold" : "Regular");
-    textSize = small ? 2.5 : 3;
+    textSize = small ? 2.25 : 2.75;
 
     translate([-width / 2, lineOffset])
     square(size=[width, length]);
 
     if (text != "") {
         translate([0, textOffset])
+        offset(-0.05)
         text(
             text=text,
             size=textSize,
@@ -90,12 +92,12 @@ module offMarks(flip=false) {
 
     // Dots
     for (xOffset=[1:3]) {
-        for (yOffset=[0.5:4.5]) {
+        for (yOffset=[0.25:4.25]) {
             translate([xOffset * xSize, yOffset * ySize])
             circle(d=0.75, $fn=50);
         }
     }
 
     // "OFF" label
-    stopMark(length=9, text="OFF", small=true, bold=true, flip=flip);
+    stopMark(length=8, text="OFF", small=true, bold=true, flip=flip);
 }
