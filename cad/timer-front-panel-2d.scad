@@ -69,7 +69,7 @@ module stopSequence(flip=false) {
 module stopMark(length=1, text="", bold=false, flip=false) {
     width = bold ? 0.6 : 0.4;
     lineOffset = flip ? -length : 0;
-    textOffset = flip ? -10 : 10;
+    textOffset = flip ? -11 : 11;
     textValign = flip ? "top" : "bottom";
 
     translate([-width / 2, lineOffset])
@@ -79,7 +79,7 @@ module stopMark(length=1, text="", bold=false, flip=false) {
         translate([0, textOffset])
         text(
             text=text,
-            size=2.5,
+            size=3,
             font=str("Helvetica Neue", bold ? ":style=Bold" : ""),
             halign="center",
             valign=textValign
@@ -104,8 +104,8 @@ module offMarks() {
     rotate(90)
     text(
         text="OFF",
-        size=1.75,
-        font="Helvetica Neue:style=Condensed Bold",
+        size=2,
+        font="Helvetica Neue:style=Bold",
         halign="center",
         valign="top"
     );
