@@ -93,7 +93,13 @@ immediately. The opposite when the stop moves downward initially.
 Electronic feedback just isn't going to work due to the responsiveness issue. I'm going to try
 physical feedback from bumps on the front panel.
 
+The enclosure came out great! But the voltage drop from the motor controller is too much, and the
+slider doesn't move reliably. I'll need to try just using a snubber diode and otherwise switching
+on and off the power to the motor directly (so it will only be able to move backwards, not forwards).
+
 TODO:
-- Amplifier power spikes -- do I need a resistor in series with the speaker or something?
-- Instead of STOP_DETENTE_SIZE, make sure the motor uses the *middle* of the stop
+- Replace motor controller with single snubber diode
+- 1 second after a new position is detected, use the motor to center the slider? This could be a
+  problem without a proper H-bridge (and the ability to move the slider up)
+- Amplifier power spikes and clicks -- do I need a resistor in series with the speaker or something?
 
