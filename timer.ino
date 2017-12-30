@@ -24,6 +24,7 @@
 
 int currentPosition_ = ~0;
 int positionChange_ = 0;
+bool setByHuman_ = false;
 stop::Stop currentStop_;
 stop::Stop nextStop_;
 clock::Stopwatch stopwatch_;
@@ -175,6 +176,7 @@ void setStopFromPosition() {
     }
 
     DEBUG_REPORT(F("Stop set by human"));
+    setByHuman_ = true;
     updateBell();
 }
 
@@ -203,6 +205,12 @@ void checkStopwatch() {
         nextStop_ = stop::byIndex(index);
         // The DEBUG_REPORT is here instead of the above block so nextStop is printed correctly
         DEBUG_REPORT(F(""));
+        updateMotor();
+    }
+    else if (setByHuman_ && nextStop_.seconds - remaining > 0) {
+        // Check if we should correct the position of the slider. Wait at least one second after
+        // the position was set manually so it hopefully happens after the person lets go.
+        setByHuman_ = false;
         updateMotor();
     }
 }
