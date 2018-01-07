@@ -10,7 +10,7 @@ enum class MotorDirection {
 
 class Motor {
 public:
-    Motor(int powerOffPin, int enablePin, int pin1, int pin2);
+    Motor(int enablePin, int pin1, int pin2);
     MotorDirection direction() const;
     bool isTurning() const;
     void setDirection(MotorDirection direction);
