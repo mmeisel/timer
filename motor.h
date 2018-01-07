@@ -12,7 +12,6 @@ class Motor {
 public:
     Motor(int enablePin, int pin1, int pin2);
     MotorDirection direction() const;
-    bool isTurning() const;
     void setDirection(MotorDirection direction);
 
 private:

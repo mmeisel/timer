@@ -11,11 +11,6 @@ MotorDirection Motor::direction() const {
     return currentDirection_;
 }
 
-bool Motor::isTurning() const {
-    return currentDirection_ == MotorDirection::REVERSE ||
-           currentDirection_ == MotorDirection::FORWARD;
-}
-
 void Motor::setDirection(MotorDirection direction) {
     if (initialized_ && currentDirection_ == direction) {
         return;
