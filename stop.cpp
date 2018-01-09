@@ -4,7 +4,6 @@
 namespace {
     // There can be extra times here, they just won't get used.
     const uint16_t STOP_TIMES[] PROGMEM = {
-        /*
         // For 39 stops
         // Every 30 seconds up to 3 minutes (6 stops)
         30, 60, 90, 120, 150, 180,
@@ -14,8 +13,7 @@ namespace {
         1320, 1380, 1440, 1500, 1560, 1620, 1680, 1740, 1800,
         // Every 5 minutes up to 1 hour (6 stops)
         2100, 2400, 2700, 3000, 3300, 3600
-        */
-    /*
+        /*
         // For 60 stops
         // Every 15 seconds up to 2 minutes
         15, 30, 45, 60, 75, 90, 105, 120,
@@ -29,11 +27,13 @@ namespace {
         1920, 2040, 2160, 2280, 2400, 2520, 2640, 2760, 2880, 3000, 3120, 3240, 3360, 3480, 3600,
         // Every 20 minutes up to 3 hours
         4800, 6000, 7200, 8400, 9600, 10800
-    */
+        */
         // Every second up to 60 seconds for testing
+        /*
         1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
         21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
         41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60
+        */
     };
 
     stop::Stop stops_[STOP_COUNT];

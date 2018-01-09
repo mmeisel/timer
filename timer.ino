@@ -10,9 +10,7 @@
 
 // Pins
 #define PIN_SLIDER_IN A0
-#define PIN_MOTOR_ENABLE 5
-#define PIN_DIR1 8
-#define PIN_DIR2 7
+#define PIN_MOTOR_ENABLE 12
 #define PIN_POWER 2   // Needs to be an interruptable pin! (2 or 3)
 #define PIN_SPEAKER 6   // Can't be changed
 
@@ -28,7 +26,7 @@ stop::Stop currentStop_;
 stop::Stop nextStop_;
 clock::Stopwatch stopwatch_;
 
-Motor motor_(PIN_MOTOR_ENABLE, PIN_DIR1, PIN_DIR2);
+Motor motor_(PIN_MOTOR_ENABLE);
 
 bool ringing_ = false;
 clock::Stopwatch bellStopwatch_;
@@ -85,7 +83,7 @@ void sleep() {
 }
 
 void shutdown() {
-    motor_.setDirection(MotorDirection::OFF);
+    motor_.stop();
     clock::pause();
 
     if (digitalRead(PIN_POWER) == LOW) {
@@ -124,21 +122,16 @@ bool updatePosition() {
 }
 
 void updateMotor() {
-    if (currentPosition_ < nextStop_.startPosition + STOP_MARGIN) {
-        // Handle overshoot
-        DEBUG_REPORT_IF(motor_.direction() != MotorDirection::FORWARD, F("Motor forward"));
-        motor_.setDirection(MotorDirection::FORWARD);
-    }
-    else if (currentPosition_ >= nextStop_.endPosition - STOP_MARGIN) {
+    if (currentPosition_ >= nextStop_.endPosition - STOP_MARGIN) {
         // Normal movement to the next stop.
-        DEBUG_REPORT_IF(motor_.direction() != MotorDirection::REVERSE, F("Motor reverse"));
-        motor_.setDirection(MotorDirection::REVERSE);
+        DEBUG_REPORT_IF(!motor_.isRunning(), F("Motor start"));
+        motor_.start();
     }
     else {
         // We reached the stop!
-        motor_.setDirection(MotorDirection::OFF);
+        motor_.stop();
         currentStop_ = nextStop_;
-        DEBUG_REPORT(F("Motor off"));
+        DEBUG_REPORT(F("Motor stop"));
         updateBell();
     }
 }
@@ -231,17 +224,15 @@ void setup() {
     Serial.begin(57600);
 #endif
 
-    pinMode(PIN_MOTOR_ENABLE, OUTPUT);
-    pinMode(PIN_DIR1, OUTPUT);
-    pinMode(PIN_DIR2, OUTPUT);
     pinMode(PIN_POWER, INPUT_PULLUP);
-    pinMode(PIN_SPEAKER, OUTPUT);
 
+    pinMode(PIN_SPEAKER, OUTPUT);
     digitalWrite(PIN_SPEAKER, LOW);
+
+    motor_.stop();
     adc::setPin(PIN_SLIDER_IN);
     stop::createStops();
     clock::attachInterrupt(handleTick);
-    motor_.setDirection(MotorDirection::OFF);
 
     waitForCrystal();
 
@@ -260,7 +251,7 @@ void loop() {
     adc::startAndSleep();
 
     if (updatePosition()) {
-        if (motor_.direction() != MotorDirection::OFF) {
+        if (motor_.isRunning()) {
             // When the motor is moving, just keep going until we hit the desired position.
             updateMotor();
         }
@@ -284,7 +275,7 @@ void loop() {
         updateBell();
     }
 
-    if (motor_.direction() == MotorDirection::OFF) {
+    if (!motor_.isRunning()) {
         // When the motor isn't running, enter low power operation. If the slider is in the off
         // position, shutdown completely.
         if (currentStop_.index == STOP_INDEX_OFF) {

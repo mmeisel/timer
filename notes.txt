@@ -97,9 +97,21 @@ The enclosure came out great! But the voltage drop from the motor controller is 
 slider doesn't move reliably. I'll need to try just using a snubber diode and otherwise switching
 on and off the power to the motor directly (so it will only be able to move backwards, not forwards).
 
-TODO:
-- Replace motor controller with single snubber diode
-- 1 second after a new position is detected, use the motor to center the slider? This could be a
-  problem without a proper H-bridge (and the ability to move the slider up)
-- Amplifier power spikes and clicks -- do I need a resistor in series with the speaker or something?
+****************************************
+R1 board errata:
+- Swap Q2 and Q3 (the labels are swapped)
+- R3 should be 220 Ω
+- In place of U3:
+  - Place a 0.1µF ceramic capacitor across pins 8 and 9
+  - Connect pin 6 to pin 8 (VCC) by bending the leg of the capacitor around to connect to pin 6
+  - Place a BS170 transistor with pins 1, 2, and 3 at U3 pin 3, U3 pin 16, and U3 pin 4, respectively.
+  - Connect Q1 pads 2 and 3 together
+- Place a diode (1N5819) in J1, anode in pin 2, cathode in pin 1 (square), leaving room to solder the
+    motor connector to its leads
+- Connect the motor with the positive lead connected to pin 2, negative lead to pin 1. When using
+  the JST connectors from eBay, this means the colors on the wires are as expected (the black wire
+  goes in the round hole)
+*****************************************
 
+TODO:
+- Amplifier power spikes and clicks -- do I need a resistor in series with the speaker or something?

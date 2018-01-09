@@ -1,44 +1,37 @@
 #include <Arduino.h>
 #include "motor.h"
 
-Motor::Motor(int enablePin, int pin1, int pin2)
-    : initialized_(false), enablePin_(enablePin), pin1_(pin1), pin2_(pin2),
-      currentDirection_(MotorDirection::OFF)
+Motor::Motor(int enablePin)
+    : initialized_(false), isRunning_(false), enablePin_(enablePin)
 {
 }
 
-MotorDirection Motor::direction() const {
-    return currentDirection_;
+bool Motor::isRunning() const {
+    return isRunning_;
 }
 
-void Motor::setDirection(MotorDirection direction) {
-    if (initialized_ && currentDirection_ == direction) {
+void Motor::start() {
+    if (!initialized_) {
+        initialized_ = true;
+        pinMode(enablePin_, OUTPUT);
+    }
+    else if (isRunning_) {
         return;
     }
 
-    currentDirection_ = direction;
-    initialized_ = true;
+    isRunning_ = true;
+    digitalWrite(enablePin_, HIGH);
+}
 
-    switch (direction) {
-        case MotorDirection::REVERSE:
-            digitalWrite(pin1_, LOW);
-            digitalWrite(pin2_, HIGH);
-            digitalWrite(enablePin_, HIGH);
-            break;
-        case MotorDirection::STOP:
-            digitalWrite(pin1_, LOW);
-            digitalWrite(pin2_, LOW);
-            digitalWrite(enablePin_, HIGH);
-            break;
-        case MotorDirection::OFF:
-            digitalWrite(pin1_, LOW);
-            digitalWrite(pin2_, LOW);
-            digitalWrite(enablePin_, LOW);
-            break;
-        case MotorDirection::FORWARD:
-            digitalWrite(pin1_, HIGH);
-            digitalWrite(pin2_, LOW);
-            digitalWrite(enablePin_, HIGH);
-            break;
+void Motor::stop() {
+    if (!initialized_) {
+        initialized_ = true;
+        pinMode(enablePin_, OUTPUT);
     }
+    else if (!isRunning_) {
+        return;
+    }
+
+    isRunning_ = false;
+    digitalWrite(enablePin_, LOW);
 }
