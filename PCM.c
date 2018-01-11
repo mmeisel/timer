@@ -94,8 +94,6 @@ void startPlayback(unsigned char const *data, int length)
   sounddata_data = data;
   sounddata_length = length;
 
-  pinMode(speakerPin, OUTPUT);
-  
   // Set up Timer 0 to do pulse width modulation on the speaker
   // pin.
 
