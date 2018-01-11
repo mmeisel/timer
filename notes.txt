@@ -112,6 +112,3 @@ R1 board errata:
   the JST connectors from eBay, this means the colors on the wires are as expected (the black wire
   goes in the round hole)
 *****************************************
-
-TODO:
-- Amplifier power spikes and clicks -- do I need a resistor in series with the speaker or something?
