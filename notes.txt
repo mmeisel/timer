@@ -112,3 +112,9 @@ R1 board errata:
   the JST connectors from eBay, this means the colors on the wires are as expected (the black wire
   goes in the round hole)
 *****************************************
+
+I've switched both the motor controller and the amplifier to a single MOSFET. I realized that the
+Class B amplifier I created wasn't really doing anything -- since it was a PWM signal alternating
+between 0V and VCC, the PNP transistor was just acting as a switch, and the NPN transistor wasn't
+doing anything except acting like a flyback diode (the voltage only went negative as a result of
+the power dissapated by the speaker acting as an inductor).
