@@ -64,16 +64,18 @@ if (WITH_FRONT_PANEL) {
 // TODO: add signature or something engraved on the bottom
 
 module backPanel() {
+    wiggleRoom = THICKNESS / 4;
+
     difference() {
         kerfAdjustedPanel([WIDTH, HEIGHT]);
 
-        // Tab
-        translate([0, HEIGHT - THICKNESS + KERF])
-        square([WIDTH / 2 - DOOR_TAB_WIDTH / 2, THICKNESS]);
+        // Tab, with some wiggle room to make it easy to move the door
+        translate([0, HEIGHT - THICKNESS - wiggleRoom + KERF])
+        square([WIDTH / 2 - DOOR_TAB_WIDTH / 2, THICKNESS + wiggleRoom]);
 
         translate([WIDTH / 2 + DOOR_TAB_WIDTH / 2 + KERF,
-                   HEIGHT - THICKNESS + KERF])
-        square([WIDTH / 2 - DOOR_TAB_WIDTH / 2, THICKNESS]);
+                   HEIGHT - THICKNESS - wiggleRoom + KERF])
+        square([WIDTH / 2 - DOOR_TAB_WIDTH / 2, THICKNESS + wiggleRoom]);
 
         // Hinge tab, left
         translate([-KERF, THICKNESS + KERF])
