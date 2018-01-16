@@ -118,3 +118,14 @@ Class B amplifier I created wasn't really doing anything -- since it was a PWM s
 between 0V and VCC, the PNP transistor was just acting as a switch, and the NPN transistor wasn't
 doing anything except acting like a flyback diode (the voltage only went negative as a result of
 the power dissapated by the speaker acting as an inductor).
+
+
+Enclosure assembly:
+- Two coats of varnish on each side of each piece (Formby's Tung Oil)
+- Solder leads to speaker
+- Glue speaker to the top piece so it covers the speaker grill using Krazy glue gel
+  - Be careful to only get the glue on the rubber rim of the speaker, not on the cone
+  - Make sure the leads are facing the right way (to the left when the back is facing away from you)
+- Glue the case together with wood glue
+  - Pay attention to orientation of the parts, especially the hole for the motor and the screw
+    holes for the PCB and battery holder on the bottom
