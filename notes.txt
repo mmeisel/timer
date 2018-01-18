@@ -129,3 +129,9 @@ Enclosure assembly:
 - Glue the case together with wood glue
   - Pay attention to orientation of the parts, especially the hole for the motor and the screw
     holes for the PCB and battery holder on the bottom
+
+
+TODO:
+- When ringing, turn off automatically after a while (A minute or so)
+- Check ramp up on bell audio, should it be zero for longer?
+- (maybe) experiment with brrrrr-ring sound by looping beginning of audio sample
