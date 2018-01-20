@@ -1,3 +1,4 @@
+#include <avr/pgmspace.h>
 #include <LowPower.h>
 #include "adc.h"
 #include "audio.h"
@@ -15,10 +16,10 @@
 #define PIN_SPEAKER 6   // Can't be changed
 
 // Constants
-#define BELL_REPEAT_SECS 6
+const uint8_t BELL_INTERVALS[] PROGMEM = { 3, 3, 10, 10, 10, 30, 30, 30, 60, 60, 60 };
+const int BELL_INTERVAL_COUNT = sizeof(BELL_INTERVALS) / sizeof(uint8_t);
 
-
-
+// Globals
 int currentPosition_ = ~0;
 int positionChange_ = 0;
 bool setByHuman_ = false;
@@ -29,6 +30,7 @@ clock::Stopwatch stopwatch_;
 Motor motor_(PIN_MOTOR_ENABLE);
 
 bool ringing_ = false;
+int ringCount_ = 0;
 clock::Stopwatch bellStopwatch_;
 
 volatile bool ticked_ = false;
@@ -137,20 +139,39 @@ void updateMotor() {
 }
 
 void updateBell() {
-    bool shouldRing = currentStop_.index == STOP_INDEX_ZERO;
+    bool shouldRing = currentStop_.index == STOP_INDEX_ZERO && ringCount_ <= BELL_INTERVAL_COUNT;
 
     if (ringing_ && !shouldRing) {
         // Set ringing_ to false only when the sound completes
         ringing_ = isPlaying();
+
+        if (!ringing_) {
+            // If we reach the maximum number of rings, wait until the last ring sound has finished
+            // playing, then shut ourselves off. We only need to get the slider moving, the other
+            // logic will handle everything else.
+            if (ringCount_ >= BELL_INTERVAL_COUNT) {
+                nextStop_ = stop::STOP_OFF;
+                updateMotor();
+            }
+
+            // Reset the ring count for next time
+            ringCount_ = 0;
+        }
     }
     else if (shouldRing) {
         if (!ringing_ || bellStopwatch_.remaining() == 0) {
 #ifdef DEBUG
-            Serial.print(F("DING!\n"));
+            Serial.print(F("DING "));
+            Serial.print(ringCount_);
+            Serial.print(F("\n"));
             Serial.flush();
 #endif
             startPlayback(audio::DATA, audio::DATA_SIZE);
-            bellStopwatch_ = clock::stopwatch(BELL_REPEAT_SECS);
+
+            if (ringCount_ < BELL_INTERVAL_COUNT) {
+                bellStopwatch_ = clock::stopwatch(pgm_read_byte(&(BELL_INTERVALS[ringCount_])));
+            }
+            ringCount_++;
         }
         ringing_ = true;
     }
