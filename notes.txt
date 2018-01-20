@@ -135,3 +135,5 @@ TODO:
 - When ringing, turn off automatically after a while (A minute or so)
 - Check ramp up on bell audio, should it be zero for longer?
 - (maybe) experiment with brrrrr-ring sound by looping beginning of audio sample
+- For the next version of the front panel, use the bottom 2mm of dead area on the slider as part of
+  the "off" area so that the amount of active space used for "off" is minimized
