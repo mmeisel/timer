@@ -16,7 +16,7 @@
 #define PIN_SPEAKER 6   // Can't be changed
 
 // Constants
-const uint8_t BELL_INTERVALS[] PROGMEM = { 3, 3, 10, 10, 10, 30, 30, 30, 60, 60, 60 };
+const uint8_t BELL_INTERVALS[] PROGMEM = { 10, 10, 10, 30, 30, 30, 60, 60, 60 };
 const int BELL_INTERVAL_COUNT = sizeof(BELL_INTERVALS) / sizeof(uint8_t);
 
 // Globals
