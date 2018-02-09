@@ -136,5 +136,14 @@ takes too long to initialize. So I'd probably have to build the feature into the
 don't think it's worth it.
 
 TODO:
+- The alternative battery holders I ordered with the JST connectors are much nicer. But to easily
+  change the batteries, it needs to be removable (or at least needs to be able to slide forward a
+  bit). For the next version of the enclosure, add some walls/rails to hold in the battery holder
+  on the left and right, with a gap behind them (towards the interior wall) for the wire.
+  Perhaps use a magnet in the back and/or on the bottom to hold it in, or put a small wall in front
+  (towards the timer door) so that it must be lifted above the wall to be removed. Need to make sure
+  it doesn't move around when the timer is turned upside-down, though (maybe a wooden "bar" to hold
+  it down). To save space and cuts, consider using the cut out from the interior panel (where the
+  slider fits through) for these parts.
 - For the next version of the front panel, use the bottom 2mm of dead area on the slider as part of
-  the "off" area so that the amount of active space used for "off" is minimized
+  the "off" area so that the amount of active space used for "off" is minimized (maybe)
