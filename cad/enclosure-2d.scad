@@ -30,9 +30,13 @@ FRONT_HEIGHT = 20;
 TILT_ANGLE = atan2(DEPTH - THICKNESS / 2,
                    (FRONT_HEIGHT + HINGE_HOLE_D / 2 - HINGE_HEIGHT / 2));
 
-BATTERY_X = 110;
-BATTERY_Y = 33;
-BATTERY_Z = 20;
+SLIDER_HOLE_WIDTH = 152;
+SLIDER_HOLE_HEIGHT = 14;
+
+BATTERY_X = 62.5;
+BATTERY_Y = 57.5;
+BATTERY_Z = 16.5;
+BATTERY_X_OFFSET = 20;
 
 translate([KERF, KERF])
 backPanel();
@@ -46,13 +50,25 @@ bottomPanel();
 translate([KERF, HEIGHT + DEPTH + BOTTOM_DEPTH + 15])
 interiorPanel();
 
-translate([KERF, 2 * HEIGHT + DEPTH + BOTTOM_DEPTH + FRONT_HEIGHT + 10])
+translate([WIDTH / 2 - BATTERY_Y + 5, 2 * HEIGHT + DEPTH + BOTTOM_DEPTH + 14])
+batteryRail();
+
+translate([WIDTH / 2 + 7, 2 * HEIGHT + DEPTH + BOTTOM_DEPTH + 14])
+batteryRail();
+
+translate([KERF, 2 * HEIGHT + DEPTH + BOTTOM_DEPTH + FRONT_HEIGHT + BATTERY_Z + 4])
 sidePanel();
 
-translate([KERF + WIDTH,
-           2 * HEIGHT + DEPTH + BOTTOM_DEPTH + FRONT_HEIGHT + 10])
+translate([KERF + WIDTH + 12,
+           2 * HEIGHT + DEPTH + BOTTOM_DEPTH + FRONT_HEIGHT + BATTERY_Z + 4])
 mirror()
 sidePanel();
+
+translate([KERF, 2 * HEIGHT + DEPTH + BOTTOM_DEPTH + BATTERY_Z + FRONT_HEIGHT + HEIGHT + 6])
+batteryCrossbar();
+
+translate([WIDTH - BATTERY_X, 2 * HEIGHT + DEPTH + BOTTOM_DEPTH + BATTERY_Z + FRONT_HEIGHT + HEIGHT + 6])
+batteryCrossbar();
 
 if (WITH_FRONT_PANEL) {
     translate([KERF,
@@ -252,19 +268,22 @@ module bottomPanel() {
             square(PCB_SIZE);
         }
 
-        // Battery holder mounting point
-        // Screw holes are centered, 56mm apart
-        translate([THICKNESS + (BATTERY_X - 56) / 2 + 4,
-                   BOTTOM_DEPTH - BATTERY_Y / 2 - 3])
-        circle(d=3, $fn=DETAIL);
+        // Battery drawer
+        translate([THICKNESS + BATTERY_X_OFFSET,
+                     INTERIOR_PANEL_DEPTH + THICKNESS +
+                     2 * MAGNET_THICKNESS])
+        {
+            for (xOffset=[-THICKNESS, BATTERY_X]) {
+                for (yOffset=[BATTERY_Y / 6, 5 * BATTERY_Y / 6]) {
+                    translate([xOffset + KERF,
+                               yOffset - INTERIOR_TAB_WIDTH / 2 + KERF])
+                    square([THICKNESS - 2 * KERF,
+                            INTERIOR_TAB_WIDTH - 2 * KERF]);
+                }
+            }
 
-        translate([THICKNESS + (BATTERY_X + 56) / 2 + 4,
-                   BOTTOM_DEPTH - BATTERY_Y / 2 - 3])
-        circle(d=3, $fn=DETAIL);
-
-        % translate([THICKNESS + 4,
-                   BOTTOM_DEPTH - BATTERY_Y - 4])
-        square([BATTERY_X, BATTERY_Y]);
+            % square([BATTERY_X, BATTERY_Y]);
+        }
     }
 }
 
@@ -308,7 +327,7 @@ module interiorPanel() {
 
             translate([xOffset, (HEIGHT + INTERIOR_TAB_WIDTH) / 2 - KERF])
             square([THICKNESS,
-                    (HEIGHT - INTERIOR_TAB_WIDTH - KERF) / 2]);
+                    (HEIGHT - INTERIOR_TAB_WIDTH) / 2]);
         }
 
         // Bottom tabs, outer cutouts
@@ -320,8 +339,8 @@ module interiorPanel() {
         }
 
         // Bottom tabs, inner cutouts
-        for (xOffset=[WIDTH / 8 + INTERIOR_TAB_WIDTH / 2 - KERF,
-                      WIDTH / 2 + INTERIOR_TAB_WIDTH / 2 - KERF])
+        for (xOffset=[WIDTH / 8 + INTERIOR_TAB_WIDTH / 2 + KERF,
+                      WIDTH / 2 + INTERIOR_TAB_WIDTH / 2 + KERF])
         {
             translate([xOffset, -KERF])
             square([3 * WIDTH / 8 - INTERIOR_TAB_WIDTH - 2 * KERF,
@@ -330,15 +349,57 @@ module interiorPanel() {
 
         // Hole for slider
         // Measurements come from data sheet, plus some wiggle room
-        translate([WIDTH / 2 - 81, HEIGHT / 2 - 6])
-        square([152, 14]);
+        translate([WIDTH / 2 - 81 + KERF, HEIGHT / 2 - 6 + KERF])
+        square([SLIDER_HOLE_WIDTH, SLIDER_HOLE_HEIGHT]);
+    }
+}
 
-        // Screw holes for face plate
-        for (xOffset=[THICKNESS + 6, WIDTH - THICKNESS - 6]) {
-            for (yOffset=[THICKNESS + 6, HEIGHT - THICKNESS - 6]) {
-                translate([xOffset, yOffset])
-                circle(d=3, $fn=DETAIL);
-            }
+module batteryRail() {
+    difference() {
+        // Use the slider hole height so that we can reuse that piece for the
+        // battery crossbars
+        crossbarWidth = SLIDER_HOLE_HEIGHT - 2 * KERF;
+
+        kerfAdjustedPanel([BATTERY_Y, BATTERY_Z + 2 * THICKNESS]);
+
+        // Bottom tabs, outer cutouts
+        for (xOffset=[-KERF,
+                      5 * BATTERY_Y / 6 + INTERIOR_TAB_WIDTH / 2 + KERF])
+        {
+            translate([xOffset, -KERF])
+            square([BATTERY_Y / 6 - INTERIOR_TAB_WIDTH / 2, THICKNESS]);
+        }
+
+        // Bottom tabs, inner cutout
+        translate([BATTERY_Y / 6 + INTERIOR_TAB_WIDTH / 2 + KERF, -KERF])
+        square([4 * BATTERY_Y / 6 - INTERIOR_TAB_WIDTH - 2 * KERF,
+                THICKNESS]);
+
+        // Cutout for crossbar with a custom finger cut
+        translate([(BATTERY_Y - crossbarWidth) / 2 + KERF,
+                   THICKNESS + BATTERY_Z + KERF])
+        {
+            square([crossbarWidth / 2 - THICKNESS - 2 * KERF,
+                    THICKNESS + KERF]);
+
+            translate([2 * crossbarWidth / 3 + KERF, 0])
+            square([crossbarWidth / 2 - THICKNESS - 2 * KERF,
+                    THICKNESS + KERF]);
+        }
+    }
+}
+
+module batteryCrossbar() {
+    // Use the slider hole height so that we can reuse that piece for the
+    // battery crossbars
+    crossbarWidth = SLIDER_HOLE_HEIGHT - 2 * KERF;
+
+    difference() {
+        kerfAdjustedPanel([BATTERY_X + 2 * THICKNESS, crossbarWidth]);
+
+        for (xOffset=[-2 * KERF, THICKNESS + BATTERY_X + KERF]) {
+            translate([xOffset, crossbarWidth / 2 - THICKNESS + KERF])
+            square([THICKNESS + KERF, 2 * THICKNESS - 2 * KERF]);
         }
     }
 }
