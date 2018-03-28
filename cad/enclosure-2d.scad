@@ -41,33 +41,44 @@ BATTERY_X_OFFSET = 20;
 translate([KERF, KERF])
 backPanel();
 
-translate([KERF, HEIGHT + 5])
+translate([KERF, HEIGHT + 2])
 topPanel();
 
-translate([KERF, HEIGHT + DEPTH + 10])
+translate([KERF, HEIGHT + DEPTH + 4])
 bottomPanel();
 
-translate([KERF, HEIGHT + DEPTH + BOTTOM_DEPTH + 15])
+translate([KERF, HEIGHT + DEPTH + BOTTOM_DEPTH + 6])
 interiorPanel();
 
-translate([WIDTH / 2 - BATTERY_Y + 5, 2 * HEIGHT + DEPTH + BOTTOM_DEPTH + 14])
-batteryRail();
-
-translate([WIDTH / 2 + 7, 2 * HEIGHT + DEPTH + BOTTOM_DEPTH + 14])
-batteryRail();
-
-translate([KERF, 2 * HEIGHT + DEPTH + BOTTOM_DEPTH + FRONT_HEIGHT + BATTERY_Z + 4])
+translate([WIDTH / 2 - HEIGHT - 1,
+           2 * HEIGHT + 2 * DEPTH + BOTTOM_DEPTH + 17])
+rotate(-90)
 sidePanel();
 
-translate([KERF + WIDTH + 12,
-           2 * HEIGHT + DEPTH + BOTTOM_DEPTH + FRONT_HEIGHT + BATTERY_Z + 4])
+translate([WIDTH / 2 + HEIGHT + 1,
+           2 * HEIGHT + 2 * DEPTH + BOTTOM_DEPTH + 17])
 mirror()
+rotate(-90)
 sidePanel();
 
-translate([KERF, 2 * HEIGHT + DEPTH + BOTTOM_DEPTH + BATTERY_Z + FRONT_HEIGHT + HEIGHT + 6])
+translate([KERF,
+           2 * HEIGHT + DEPTH + BOTTOM_DEPTH + BATTERY_Y + 6])
+rotate(-90)
+batteryRail();
+
+translate([WIDTH + KERF,
+           2 * HEIGHT + DEPTH + BOTTOM_DEPTH + BATTERY_Y + 6])
+mirror()
+rotate(-90)
+batteryRail();
+
+translate([WIDTH / 2 - 81 + 2 * KERF,
+           2 * HEIGHT + 2 * DEPTH + BOTTOM_DEPTH + 19])
 batteryCrossbar();
 
-translate([WIDTH - BATTERY_X, 2 * HEIGHT + DEPTH + BOTTOM_DEPTH + BATTERY_Z + FRONT_HEIGHT + HEIGHT + 6])
+translate([WIDTH / 2 - 81 + 2 * KERF + SLIDER_HOLE_WIDTH,
+           2 * HEIGHT + 2 * DEPTH + BOTTOM_DEPTH + 19])
+mirror()
 batteryCrossbar();
 
 if (WITH_FRONT_PANEL) {
