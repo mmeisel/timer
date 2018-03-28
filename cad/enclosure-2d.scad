@@ -25,10 +25,10 @@ DOOR_TAB_WIDTH = 20;
 MAGNET_THICKNESS = 4;
 HINGE_HOLE_D = sqrt(2 * THICKNESS * THICKNESS);
 HINGE_HEIGHT = 4 * THICKNESS;
-BOTTOM_DEPTH = DEPTH - HINGE_HOLE_D / 2 - 0.5;    // 0.5mm clearance
+BOTTOM_DEPTH = DEPTH - THICKNESS / 2 - HINGE_HOLE_D / 2 - 2 * KERF;
 FRONT_HEIGHT = 20;
-TILT_ANGLE = atan2(DEPTH - THICKNESS / 2,
-                   (FRONT_HEIGHT + HINGE_HOLE_D / 2 - HINGE_HEIGHT / 2));
+TILT_ANGLE = asin((FRONT_HEIGHT + HINGE_HOLE_D / 2 - HINGE_HEIGHT / 2) /
+                  DEPTH);
 
 SLIDER_HOLE_WIDTH = 152;
 SLIDER_HOLE_HEIGHT = 14;
@@ -160,10 +160,9 @@ module topPanel() {
 }
 
 module sidePanel() {
-    //rotate(-90 + TILT_ANGLE)
+    //rotate(-TILT_ANGLE)
     union() {
-        difference()
-        {
+        difference() {
             kerfAdjustedPanel([DEPTH, HEIGHT]);
 
             // Top
@@ -238,21 +237,6 @@ module bottomPanel() {
             translate([WIDTH, 0])
             rotate(180)
             fingerCuts(width=WIDTH, startUp=false);
-        }
-
-        intersection() {
-            translate([WIDTH - THICKNESS, 0])
-            square([THICKNESS, BOTTOM_DEPTH]);
-
-            union() {
-                translate([WIDTH + FRONT_HEIGHT, 0])
-                rotate(90)
-                frontFoot();
-
-                translate([WIDTH - HINGE_HOLE_D / 2, DEPTH])
-                rotate(90)
-                hingeHousing();
-            }
         }
 
         // Holes for tabs from interior panel
@@ -436,13 +420,13 @@ module hingeHousing() {
 
 
 module frontFoot() {
-    rotate(90 - TILT_ANGLE)
-    translate([13, -FRONT_HEIGHT])
+    rotate(TILT_ANGLE)
+    translate([12, -FRONT_HEIGHT])
     offset(KERF)
     polygon([[5, 0],
              [0, FRONT_HEIGHT + THICKNESS],
              [20, FRONT_HEIGHT + THICKNESS],
-             [15, 0]]);    
+             [15, 0]]);
 }
 
 module fingerCuts(width=10,
