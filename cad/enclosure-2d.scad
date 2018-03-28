@@ -76,11 +76,6 @@ translate([WIDTH / 2 - 81 + 2 * KERF,
            2 * HEIGHT + 2 * DEPTH + BOTTOM_DEPTH + 19])
 batteryCrossbar();
 
-translate([WIDTH / 2 - 81 + 2 * KERF + SLIDER_HOLE_WIDTH,
-           2 * HEIGHT + 2 * DEPTH + BOTTOM_DEPTH + 19])
-mirror()
-batteryCrossbar();
-
 if (WITH_FRONT_PANEL) {
     translate([KERF,
                2 * HEIGHT + 2 * DEPTH + BOTTOM_DEPTH + 10])
