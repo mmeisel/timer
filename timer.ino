@@ -166,7 +166,7 @@ void updateBell() {
             Serial.print(F("\n"));
             Serial.flush();
 #endif
-            startPlayback(audio::DATA, audio::DATA_SIZE);
+            startPlayback(audio::BELL_DATA, audio::BELL_DATA_SIZE);
 
             if (ringCount_ < BELL_INTERVAL_COUNT) {
                 bellStopwatch_ = clock::stopwatch(pgm_read_byte(&(BELL_INTERVALS[ringCount_])));
@@ -221,10 +221,13 @@ void checkStopwatch() {
         updateMotor();
     }
     else if (setByHuman_ && nextStop_.seconds - remaining > 0) {
-        // Check if we should correct the position of the slider. Wait at least one second after
-        // the position was set manually so it hopefully happens after the person lets go.
+        // Make a "click" sound to indicate we got the message and check if we should correct the
+        // position of the slider. Wait at least one second after the position was set manually so
+        // this all hopefully happens after the person lets go.
         setByHuman_ = false;
-        updateMotor();
+        startPlayback(audio::CLICK_DATA, audio::CLICK_DATA_SIZE);
+        // TODO: need to figure out how to do both of these if I want that
+        //updateMotor();
     }
 }
 
