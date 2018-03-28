@@ -134,7 +134,7 @@ module topPanel() {
         // Cutout for battery door tab
         translate([(WIDTH - DOOR_TAB_WIDTH) / 2,
                    DEPTH - THICKNESS - MAGNET_THICKNESS])
-        offset(-KERF)
+        offset(delta=-KERF)
         square([DOOR_TAB_WIDTH, 2 * THICKNESS + MAGNET_THICKNESS]);
 
         // Speaker holes
@@ -395,7 +395,7 @@ module batteryCrossbar() {
 }
 
 module kerfAdjustedPanel(size=[1, 1]) {
-    offset(KERF) square(size);
+    offset(delta=KERF) square(size);
 }
 
 module hingeHousing() {
