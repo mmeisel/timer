@@ -356,14 +356,15 @@ module batteryRail() {
         for (xOffset=[-KERF,
                       5 * BATTERY_Y / 6 + INTERIOR_TAB_WIDTH / 2 + KERF])
         {
-            translate([xOffset, -KERF])
-            square([BATTERY_Y / 6 - INTERIOR_TAB_WIDTH / 2, THICKNESS]);
+            translate([xOffset, -THICKNESS - KERF])
+            square([BATTERY_Y / 6 - INTERIOR_TAB_WIDTH / 2, 2 * THICKNESS]);
         }
 
         // Bottom tabs, inner cutout
-        translate([BATTERY_Y / 6 + INTERIOR_TAB_WIDTH / 2 + KERF, -KERF])
+        translate([BATTERY_Y / 6 + INTERIOR_TAB_WIDTH / 2 + KERF,
+                   -THICKNESS - KERF])
         square([4 * BATTERY_Y / 6 - INTERIOR_TAB_WIDTH - 2 * KERF,
-                THICKNESS]);
+                2 * THICKNESS]);
 
         // Cutout for crossbar with a custom finger cut
         translate([(BATTERY_Y - crossbarWidth) / 2 + KERF,
