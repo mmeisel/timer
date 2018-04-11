@@ -5,6 +5,7 @@
 // Based on http://www.embedds.com/avr-timer2-asynchronous-mode/
 
 #define UNDEFINED -1L
+#define STABILIZE_TICK_LIMIT 24000L  // 3 seconds at 125 us per tick
 
 // TODO: move to some common header
 //#define DEBUG 1
@@ -125,6 +126,8 @@ namespace clock {
         init_(true);
 
         // Start both timers, use the interrupt to track the deviation and wait for it to stabilize
+        ticks_ = 0;
+        lastTicks_ = 0;
         average_ = UNDEFINED;
         deviation_ = UNDEFINED;
 
@@ -138,7 +141,8 @@ namespace clock {
         long debugLastDeviation = deviation_;
 #endif
 
-        while (deviation_ != 0) {
+        // Wait for stabilization, or for STABILIZE_TICK_LIMIT to elapse
+        while (deviation_ != 0 && ticks_ < STABILIZE_TICK_LIMIT) {
 #ifdef DEBUG
             if (deviation_ != debugLastDeviation) {
                 Serial.print(F(" average="));
