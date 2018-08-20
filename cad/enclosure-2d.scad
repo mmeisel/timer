@@ -33,8 +33,8 @@ TILT_ANGLE = asin((FRONT_HEIGHT + HINGE_HOLE_D / 2 - HINGE_HEIGHT / 2) /
 SLIDER_HOLE_WIDTH = 152;
 SLIDER_HOLE_HEIGHT = 14;
 
-BATTERY_X = 62.5;
-BATTERY_Y = 57.5;
+BATTERY_X = 63;
+BATTERY_Y = 58;
 BATTERY_Z = 16.5;
 BATTERY_X_OFFSET = 20;
 
@@ -71,10 +71,6 @@ translate([WIDTH + KERF,
 mirror()
 rotate(-90)
 batteryRail();
-
-translate([WIDTH / 2 - 81 + 2 * KERF,
-           2 * HEIGHT + 2 * DEPTH + BOTTOM_DEPTH + 19])
-batteryCrossbar();
 
 if (WITH_FRONT_PANEL) {
     translate([KERF,
@@ -244,7 +240,7 @@ module bottomPanel() {
 
         // PCB mounting point
         translate([WIDTH - THICKNESS - PCB_SPACING - 8,
-                   BOTTOM_DEPTH - PCB_SPACING - 8])
+                   BOTTOM_DEPTH - PCB_SPACING - 6])
         {
             for (xOffset=[0, PCB_SPACING]) {
                 for (yOffset=[0, PCB_SPACING]) {
@@ -346,10 +342,6 @@ module interiorPanel() {
 
 module batteryRail() {
     difference() {
-        // Use the slider hole height so that we can reuse that piece for the
-        // battery crossbars
-        crossbarWidth = SLIDER_HOLE_HEIGHT - 2 * KERF;
-
         kerfAdjustedPanel([BATTERY_Y, BATTERY_Z + 2 * THICKNESS]);
 
         // Bottom tabs, outer cutouts
@@ -365,33 +357,6 @@ module batteryRail() {
                    -THICKNESS - KERF])
         square([4 * BATTERY_Y / 6 - INTERIOR_TAB_WIDTH - 2 * KERF,
                 2 * THICKNESS]);
-
-        // Cutout for crossbar with a custom finger cut
-        translate([(BATTERY_Y - crossbarWidth) / 2 + KERF,
-                   THICKNESS + BATTERY_Z + KERF])
-        {
-            square([crossbarWidth / 2 - THICKNESS - 2 * KERF,
-                    THICKNESS + KERF]);
-
-            translate([2 * crossbarWidth / 3 + KERF, 0])
-            square([crossbarWidth / 2 - THICKNESS - 2 * KERF,
-                    THICKNESS + KERF]);
-        }
-    }
-}
-
-module batteryCrossbar() {
-    // Use the slider hole height so that we can reuse that piece for the
-    // battery crossbars
-    crossbarWidth = SLIDER_HOLE_HEIGHT - 2 * KERF;
-
-    difference() {
-        kerfAdjustedPanel([BATTERY_X + 2 * THICKNESS, crossbarWidth]);
-
-        for (xOffset=[-2 * KERF, THICKNESS + BATTERY_X + KERF]) {
-            translate([xOffset, crossbarWidth / 2 - THICKNESS + KERF])
-            square([THICKNESS + KERF, 2 * THICKNESS - 2 * KERF]);
-        }
     }
 }
 
