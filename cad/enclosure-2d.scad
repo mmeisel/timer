@@ -57,7 +57,7 @@ sidePanel();
 
 translate([WIDTH / 2 + HEIGHT + 1,
            2 * HEIGHT + 2 * DEPTH + BOTTOM_DEPTH + 17])
-mirror()
+mirror([1, 0])
 rotate(-90)
 sidePanel();
 
@@ -68,7 +68,7 @@ batteryRail();
 
 translate([WIDTH + KERF,
            2 * HEIGHT + DEPTH + BOTTOM_DEPTH + BATTERY_Y + 6])
-mirror()
+mirror([1, 0])
 rotate(-90)
 batteryRail();
 
