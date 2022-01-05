@@ -2,7 +2,7 @@
  * speaker_pcm
  *
  * Plays 8-bit PCM audio on pin 11 using pulse-width modulation (PWM).
- * For Arduino with Atmega168 at 16 MHz.
+ * For Arduino with Atmega168.
  *
  * Uses two timers. The first changes the sample value 8000 times a second.
  * The second holds pin 11 high for 0-255 ticks out of a 256-tick cycle,
@@ -11,8 +11,8 @@
  * it almost sounds halfway decent, just really quiet on a PC speaker.
  *
  * Takes over Timer 1 (16-bit) for the 8000 Hz timer. This breaks PWM
- * (analogWrite()) for Arduino pins 9 and 10. Takes Timer 2 (8-bit)
- * for the pulse width modulation, breaking PWM for pins 11 & 3.
+ * (analogWrite()) for Arduino pins 9 and 10. Takes Timer 0 (8-bit)
+ * for the pulse width modulation, breaking PWM for pins 6 & ?.
  *
  * References:
  *     http://www.uchobby.com/index.php/2007/11/11/arduino-sound-part-1/

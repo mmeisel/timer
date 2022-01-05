@@ -122,7 +122,7 @@ namespace clock {
         OCR0A = 124;
         TCNT0 = 0;
 
-        // Don't prescale so we can get as many samples as possible
+        // Reconfigure Timer2 registers for stabilization mode
         init_(true);
 
         // Start both timers, use the interrupt to track the deviation and wait for it to stabilize
