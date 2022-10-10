@@ -79,7 +79,7 @@ void handleTick() {
     ticked_ = true;
 }
 
-void sleep() {
+void goToSleep() {
     clock::prepareForSleep();
     LowPower.powerSave(SLEEP_FOREVER, ADC_OFF, BOD_OFF, TIMER2_ON);
 }
@@ -303,7 +303,7 @@ void loop() {
             shutdown();
         }
         else {
-            sleep();
+            goToSleep();
         }
     }
 }
