@@ -1,14 +1,13 @@
 #include <Arduino.h>
 #include <util/atomic.h>
 #include "clock.h"
+#include "config.h"
+#include "debug.h"
 
 // Based on http://www.embedds.com/avr-timer2-asynchronous-mode/
 
 #define UNDEFINED -1L
 #define STABILIZE_TICK_LIMIT 24000L  // 3 seconds at 125 us per tick
-
-// TODO: move to some common header
-//#define DEBUG 1
 
 namespace {
     volatile unsigned time_ = 0;
@@ -137,35 +136,33 @@ namespace clock {
         TIFR2 = bit(OCF2B);
         TIMSK2 = bit(OCIE2B);
 
-#ifdef DEBUG
+        #if CONFIG_DEBUG
         long debugLastDeviation = deviation_;
-#endif
+        #endif
 
         // Wait for stabilization, or for STABILIZE_TICK_LIMIT to elapse
         while (deviation_ != 0 && ticks_ < STABILIZE_TICK_LIMIT) {
-#ifdef DEBUG
+            #if CONFIG_DEBUG
             if (deviation_ != debugLastDeviation) {
-                Serial.print(F(" average="));
-                Serial.print(average_);
-                Serial.print(F(" deviation="));
-                Serial.print(deviation_);
-                Serial.print(F(" ticks="));
-                Serial.print(ticks_);
-                Serial.print(F("\n"));
-                Serial.flush();
+                DEBUG_PRINT(F(" average="));
+                DEBUG_PRINT(average_);
+                DEBUG_PRINT(F(" deviation="));
+                DEBUG_PRINT(deviation_);
+                DEBUG_PRINT(F(" ticks="));
+                DEBUG_PRINT(ticks_);
+                DEBUG_PRINT(F("\n"));
+                DEBUG_FLUSH();
                 debugLastDeviation = deviation_;
             }
-#endif
+            #endif
         }
 
-#ifdef DEBUG
-        Serial.print(F(" average="));
-        Serial.print(average_);
-        Serial.print(F(" deviation="));
-        Serial.print(deviation_);
-        Serial.print(F("\n"));
-        Serial.flush();
-#endif
+        DEBUG_PRINT(F(" average="));
+        DEBUG_PRINT(average_);
+        DEBUG_PRINT(F(" deviation="));
+        DEBUG_PRINT(deviation_);
+        DEBUG_PRINT(F("\n"));
+        DEBUG_FLUSH();
 
         // Prepare for normal operation, but don't do anything else until stopwatch() or resume()
         // is called

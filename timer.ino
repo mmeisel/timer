@@ -3,17 +3,11 @@
 #include "adc.h"
 #include "audio.h"
 #include "clock.h"
+#include "config.h"
+#include "debug.h"
 #include "motor.h"
 #include "PCM.h"
 #include "stop.h"
-
-//#define DEBUG 1
-
-// Pins
-#define PIN_SLIDER_IN A0
-#define PIN_MOTOR_ENABLE 12
-#define PIN_POWER 2   // Needs to be an interruptable pin! (2 or 3)
-#define PIN_SPEAKER 6   // Can't be changed
 
 // Constants
 const uint8_t BELL_INTERVALS[] PROGMEM = { 10, 10, 10, 30, 30, 30, 60, 60, 60 };
@@ -27,7 +21,7 @@ stop::Stop currentStop_;
 stop::Stop nextStop_;
 clock::Stopwatch stopwatch_;
 
-Motor motor_(PIN_MOTOR_ENABLE);
+Motor motor_(CONFIG_PIN_MOTOR_ENABLE);
 
 bool ringing_ = false;
 int ringCount_ = 0;
@@ -37,42 +31,40 @@ volatile bool ticked_ = false;
 
 
 
-#ifdef DEBUG
+#if CONFIG_DEBUG
 
-volatile unsigned int interruptCount_;
+volatile unsigned int interruptCount_ = 0;
 
+#define DEBUG_RECORD_INTERRUPT() interruptCount_++
 #define DEBUG_REPORT(message) printReport(message)
-#define DEBUG_REPORT_IF(condition, message) ((condition) ? printReport(message) : (void) 0)
 
 void printReport(const __FlashStringHelper* message) {
-    Serial.print(message);
-    Serial.print(F("\n\tremaining="));
-    Serial.print(stopwatch_.remaining());
-    Serial.print(F(" currentStop="));
-    Serial.print(currentStop_.index);
-    Serial.print(F(" nextStop="));
-    Serial.print(nextStop_.index);
-    Serial.print(F(" currentPosition="));
-    Serial.print(currentPosition_);
-    Serial.print(F(" interruptCount="));
-    Serial.print(interruptCount_);
-    Serial.print(F("\n"));
-    Serial.flush();
+    DEBUG_PRINT(message);
+    DEBUG_PRINT(F("\n\tremaining="));
+    DEBUG_PRINT(stopwatch_.remaining());
+    DEBUG_PRINT(F(" currentStop="));
+    DEBUG_PRINT(currentStop_.index);
+    DEBUG_PRINT(F(" nextStop="));
+    DEBUG_PRINT(nextStop_.index);
+    DEBUG_PRINT(F(" currentPosition="));
+    DEBUG_PRINT(currentPosition_);
+    DEBUG_PRINT(F(" interruptCount="));
+    DEBUG_PRINT(interruptCount_);
+    DEBUG_PRINT(F("\n"));
+    DEBUG_FLUSH();
 }
 
 #else
 
-#define DEBUG_REPORT(x) ((void) 0)
-#define DEBUG_REPORT_IF(x, y) ((void) 0)
+#define DEBUG_RECORD_INTERRUPT() do {} while (false)
+#define DEBUG_REPORT(message) do {} while (false)
 
 #endif
 
 
 
 void handlePinInterrupt() {
-#ifdef DEBUG
-    interruptCount_++;
-#endif
+    DEBUG_RECORD_INTERRUPT();
 }
 
 void handleTick() {
@@ -88,26 +80,22 @@ void shutdown() {
     motor_.stop();
     clock::pause();
 
-    if (digitalRead(PIN_POWER) == LOW) {
-#ifdef DEBUG
-        Serial.print(F("Can't fully power down, adjust resistor values\n"));
-        Serial.flush();
-#endif
+    if (digitalRead(CONFIG_PIN_POWER) == LOW) {
+        DEBUG_PRINT(F("Can't fully power down, adjust resistor values\n"));
+        DEBUG_FLUSH();
         LowPower.powerSave(SLEEP_1S, ADC_OFF, BOD_OFF, TIMER2_ON);
         return;
     }
 
-#ifdef DEBUG
-    Serial.print(F("Powering down\n"));
-    Serial.flush();
-#endif
+    DEBUG_PRINT(F("Powering down\n"));
+    DEBUG_FLUSH();
 
     // Power down and wake up only if we get an interrupt from the power pin
-    attachInterrupt(digitalPinToInterrupt(PIN_POWER), handlePinInterrupt, LOW);
+    attachInterrupt(digitalPinToInterrupt(CONFIG_PIN_POWER), handlePinInterrupt, LOW);
     LowPower.powerDown(SLEEP_FOREVER, ADC_OFF, BOD_OFF);
 
     // When turned on again, stop listening for interrupts on the power pin
-    detachInterrupt(digitalPinToInterrupt(PIN_POWER));
+    detachInterrupt(digitalPinToInterrupt(CONFIG_PIN_POWER));
     waitForCrystal();
 }
 
@@ -126,7 +114,9 @@ bool updatePosition() {
 void updateMotor() {
     if (currentPosition_ >= nextStop_.endPosition - STOP_MARGIN) {
         // Normal movement to the next stop.
-        DEBUG_REPORT_IF(!motor_.isRunning(), F("Motor start"));
+        if (CONFIG_DEBUG && !motor_.isRunning()) {
+            DEBUG_REPORT(F("Motor start"));
+        }
         motor_.start();
     }
     else {
@@ -160,12 +150,10 @@ void updateBell() {
     }
     else if (shouldRing) {
         if (!ringing_ || bellStopwatch_.remaining() == 0) {
-#ifdef DEBUG
-            Serial.print(F("DING "));
-            Serial.print(ringCount_);
-            Serial.print(F("\n"));
-            Serial.flush();
-#endif
+            DEBUG_PRINT(F("DING "));
+            DEBUG_PRINT(ringCount_);
+            DEBUG_PRINT(F("\n"));
+            DEBUG_FLUSH();
             startPlayback(audio::DATA, audio::DATA_SIZE);
 
             if (ringCount_ < BELL_INTERVAL_COUNT) {
@@ -203,17 +191,15 @@ void checkStopwatch() {
     }
 
     if (index < nextStop_.index) {
-#ifdef DEBUG
-        Serial.print(F("Tick "));
-        Serial.print(nextStop_.index);
-        Serial.print(F(" ("));
-        Serial.print(nextStop_.seconds);
-        Serial.print(F(") to "));
-        Serial.print(index);
-        Serial.print(F(" ("));
-        Serial.print(stop::byIndex(index).seconds);
-        Serial.print(F(")"));
-#endif
+        DEBUG_PRINT(F("Tick "));
+        DEBUG_PRINT(nextStop_.index);
+        DEBUG_PRINT(F(" ("));
+        DEBUG_PRINT(nextStop_.seconds);
+        DEBUG_PRINT(F(") to "));
+        DEBUG_PRINT(index);
+        DEBUG_PRINT(F(" ("));
+        DEBUG_PRINT(stop::byIndex(index).seconds);
+        DEBUG_PRINT(F(")"));
 
         nextStop_ = stop::byIndex(index);
         // The DEBUG_REPORT is here instead of the above block so nextStop is printed correctly
@@ -231,27 +217,22 @@ void checkStopwatch() {
 void waitForCrystal() {
     // After starting from power down, the crystal needs to stabilize, see:
     // http://www.atmel.com/images/atmel-1259-real-time-clock-rtc-using-the-asynchronous-timer_ap-note_avr134.pdf
-#ifdef DEBUG
-    Serial.print(F("Waiting for crystal\n"));
-    Serial.flush();
-#endif
+    DEBUG_PRINT(F("Waiting for crystal\n"));
+    DEBUG_FLUSH();
 
     clock::stabilize();
 }
 
 void setup() {
-#ifdef DEBUG
-    interruptCount_ = 0;
-    Serial.begin(57600);
-#endif
+    DEBUG_BEGIN(57600);
 
-    pinMode(PIN_POWER, INPUT_PULLUP);
+    pinMode(CONFIG_PIN_POWER, INPUT_PULLUP);
 
-    pinMode(PIN_SPEAKER, OUTPUT);
-    digitalWrite(PIN_SPEAKER, LOW);
+    pinMode(CONFIG_PIN_SPEAKER, OUTPUT);
+    digitalWrite(CONFIG_PIN_SPEAKER, LOW);
 
     motor_.stop();
-    adc::setPin(PIN_SLIDER_IN);
+    adc::setPin(CONFIG_PIN_SLIDER_IN);
     stop::createStops();
     clock::attachInterrupt(handleTick);
 

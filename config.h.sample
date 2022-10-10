@@ -1,0 +1,12 @@
+#ifndef __TIMER_CONFIG_H__
+#define __TIMER_CONFIG_H__
+
+#define CONFIG_DEBUG false
+
+// Pins
+#define CONFIG_PIN_SLIDER_IN A0
+#define CONFIG_PIN_MOTOR_ENABLE 12
+#define CONFIG_PIN_POWER 2 // Needs to be an interruptable pin! (2 or 3)
+#define CONFIG_PIN_SPEAKER 6 // Can't be changed
+
+#endif
