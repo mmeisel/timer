@@ -149,3 +149,22 @@ TODO:
   slider fits through) for these parts.
 - For the next version of the front panel, use the bottom 2mm of dead area on the slider as part of
   the "off" area so that the amount of active space used for "off" is minimized (maybe)
+
+-------------------------
+For the next revision
+- Power management so I can run the logic at 3.3V and the motor at a sufficiently high voltage
+- Use PWM to drive the motor slower so we can be more precise
+- Reduce power draw to increase battery life. Current power draw (measured on #6 @ 4.8V):
+  - ~1075 uA when off (??)
+  - ~1205 uA when running but not ticking
+  - ~8 mA (max) when ticking
+  - ~180 mA (max) when ringing
+- Anti-pop circuit?
+- Analyze speaker power draw
+- Could we use a brief push of the motor when going past a stop as tactile feedback?
+
+Much of the power draw when off (0.7 mA) seems to be from the comparator, which is suspiciously
+close to its rated "supply current". There is also 0.5 mA from the potentiometer (5V / 10k). We
+could significantly reduce both of these by removing the comparator, disconnecting power to the
+pot when in sleep mode, but just waking up occasionally to check (via the ADC) if the slider had
+been moved.
