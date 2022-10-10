@@ -48,7 +48,7 @@ namespace adc {
         }
     }
 
-    void startAndSleep(bool enableTimer2) {
+    void startAndSleep() {
         preflightCheck_();
         isRunning_ = true;
         // Idle and ADC noise reduction modes start the conversion automatically if the ADC is on.
