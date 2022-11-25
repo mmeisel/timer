@@ -9,7 +9,6 @@ public:
     void stop();
 
 private:
-    bool initialized_;
     bool isRunning_;
     int enablePin_;
 };

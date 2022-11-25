@@ -45,7 +45,6 @@ namespace {
     // Timer2 overflow ISR, used in normal operation
     ISR(TIMER2_OVF_vect) {
         if (ready_) {
-            // Normal operation
             time_++;
 
             if (userFn_) {
@@ -222,7 +221,6 @@ namespace clock {
         // See ATmega328 datasheet, page 201
         OCR2A = 0;
         while (ASSR & bit(OCR2AUB));
-
     }
 
     void attachInterrupt(void (*userFn)(void)) {

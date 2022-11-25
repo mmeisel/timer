@@ -12,7 +12,7 @@
  *
  * Takes over Timer 1 (16-bit) for the 8000 Hz timer. This breaks PWM
  * (analogWrite()) for Arduino pins 9 and 10. Takes Timer 0 (8-bit)
- * for the pulse width modulation, breaking PWM for pins 6 & ?.
+ * for the pulse width modulation, breaking PWM for pin 5.
  *
  * References:
  *     http://www.uchobby.com/index.php/2007/11/11/arduino-sound-part-1/
@@ -40,6 +40,9 @@
 
 #include "PCM.h"
 
+// This would require code changes to use anything other than pin 6 (OC0A)
+#define PIN_SPEAKER 6
+
 /*
  * The audio data needs to be unsigned, 8-bit, 8000 Hz, and small enough
  * to fit in flash. 10000-13000 samples is about the limit.
@@ -64,7 +67,6 @@
  * sox audiodump.wav -c 1 -r 8000 -u -b macstartup-8000.wav
  */
 
-int speakerPin = 6;
 unsigned char const *sounddata_data=0;
 int sounddata_length=0;
 volatile int sample;
@@ -85,7 +87,7 @@ ISR(TIMER1_COMPA_vect) {
   else {
     OCR0A = pgm_read_byte(&sounddata_data[sample]);
   }
-  
+
   ++sample;
 }
 
@@ -101,29 +103,29 @@ void startPlayback(unsigned char const *data, int length)
   // Do non-inverting PWM on pin OC0A (p.155) on the Arduino this is pin 6.
   TCCR0A = _BV(COM0A1) | _BV(WGM01) | _BV(WGM00);
   TCCR0B = _BV(CS00);
-  
+
   playing = 1;
-  
+
   // Set up Timer 1 to send a sample every interrupt.
-  
+
   cli();
-  
+
   // Set CTC mode (Clear Timer on Compare Match) (p.133), no prescaler (p.134)
   // Have to set OCR1A *after*, otherwise it gets reset to 0!
   TCCR1A = 0;
   TCCR1B = _BV(WGM12) | _BV(CS10);
-  
+
   // Set the compare register (OCR1A).
   // OCR1A is a 16-bit register, so we have to do this with
   // interrupts disabled to be safe.
   OCR1A = F_CPU / SAMPLE_RATE;    // 16e6 / 8000 = 2000
-  
+
   // Enable interrupt when TCNT1 == OCR1A (p.136)
   TIMSK1 = _BV(OCIE1A);
 
   // Disable interrupts for Timer0
   TIMSK0 = 0;
-  
+
   lastSample = pgm_read_byte(&sounddata_data[sounddata_length-1]);
   sample = 0;
   sei();
@@ -133,14 +135,14 @@ void stopPlayback()
 {
   // Disable playback per-sample interrupt.
   TIMSK1 = 0;
-  
+
   // Disable the per-sample timer completely.
   TCCR1B = 0;
-  
+
   // Disable the PWM timer.
   TCCR0B = 0;
 
-  digitalWrite(speakerPin, LOW);
+  digitalWrite(PIN_SPEAKER, LOW);
 
   playing = 0;
 }

@@ -28,11 +28,10 @@ namespace {
         // Every 20 minutes up to 3 hours
         4800, 6000, 7200, 8400, 9600, 10800
         */
-        // Every second up to 60 seconds for testing
+        // Every two seconds for testing
         /*
-        1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
-        21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
-        41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60
+        2,  4,  6,  8,  10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40,
+        42, 44, 46, 48, 50, 52, 54, 56, 58, 60, 62, 64, 66, 68, 70, 72, 74, 76, 78, 80
         */
     };
 
@@ -63,7 +62,7 @@ namespace stop {
             return stops_[index];
         }
 
-        return STOP_NOT_A_STOP;        
+        return STOP_NOT_A_STOP;
     }
 
     Stop byPosition(int position) {
@@ -75,7 +74,7 @@ namespace stop {
         if (position < STOP_SIZE_OFF) {
             return STOP_OFF;
         }
-        
+
         if (position < STOP_SIZE_OFF + STOP_SIZE_NORMAL) {
             return STOP_ZERO;
         }

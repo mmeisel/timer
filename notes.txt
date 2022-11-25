@@ -168,3 +168,14 @@ close to its rated "supply current". There is also 0.5 mA from the potentiometer
 could significantly reduce both of these by removing the comparator, disconnecting power to the
 pot when in sleep mode, but just waking up occasionally to check (via the ADC) if the slider had
 been moved.
+
+------------------------
+11/25/2022
+
+According to the datasheet, the motor takes about 488µs to move to the next ADC value (out of 1023).
+So for 24 values per step, that's about 11.7ms per step. Instead of an independent PWM signal, we
+could sync bit-banged PWM to the ADC. So we just run the motor for some time significantly less
+than 11.7ms, but at least 488µs, then stop. Once we check the position, if it's not there yet,
+repeat.
+
+With new setup, < 14µA both when off and when running but not ticking!

@@ -2,7 +2,7 @@
 #include "motor.h"
 
 Motor::Motor(int enablePin)
-    : initialized_(false), isRunning_(false), enablePin_(enablePin)
+    : isRunning_(false), enablePin_(enablePin)
 {
 }
 
@@ -11,11 +11,7 @@ bool Motor::isRunning() const {
 }
 
 void Motor::start() {
-    if (!initialized_) {
-        initialized_ = true;
-        pinMode(enablePin_, OUTPUT);
-    }
-    else if (isRunning_) {
+    if (isRunning_) {
         return;
     }
 
@@ -24,14 +20,10 @@ void Motor::start() {
 }
 
 void Motor::stop() {
-    if (!initialized_) {
-        initialized_ = true;
-        pinMode(enablePin_, OUTPUT);
-    }
-    else if (!isRunning_) {
+    if (!isRunning_) {
         return;
     }
 
-    isRunning_ = false;
     digitalWrite(enablePin_, LOW);
+    isRunning_ = false;
 }

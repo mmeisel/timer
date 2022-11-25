@@ -10,207 +10,190 @@
 #include "stop.h"
 
 // Constants
-const uint8_t BELL_INTERVALS[] PROGMEM = { 10, 10, 10, 30, 30, 30, 60, 60, 60 };
+const uint8_t BELL_INTERVALS[] PROGMEM = { 10, 10, 30, 30, 30, 60, 60, 60 };
 const int BELL_INTERVAL_COUNT = sizeof(BELL_INTERVALS) / sizeof(uint8_t);
 
 // Globals
 int currentPosition_ = ~0;
-int positionChange_ = 0;
 bool setByHuman_ = false;
 stop::Stop currentStop_;
-stop::Stop nextStop_;
+stop::Stop desiredStop_;
 clock::Stopwatch stopwatch_;
 
 Motor motor_(CONFIG_PIN_MOTOR_ENABLE);
 
-bool ringing_ = false;
 int ringCount_ = 0;
 clock::Stopwatch bellStopwatch_;
 
-volatile bool ticked_ = false;
+volatile bool nextSecond_ = false;
 
 
 
 #if CONFIG_DEBUG
 
-volatile unsigned int interruptCount_ = 0;
+unsigned long loopCount_ = 0UL;
 
-#define DEBUG_RECORD_INTERRUPT() interruptCount_++
+#define DEBUG_LOOP_COUNT() (loopCount_++)
+#define DEBUG_LOOP_COUNT_RESET() (loopCount_ = 0UL)
 #define DEBUG_REPORT(message) printReport(message)
 
 void printReport(const __FlashStringHelper* message) {
     DEBUG_PRINT(message);
     DEBUG_PRINT(F("\n\tremaining="));
     DEBUG_PRINT(stopwatch_.remaining());
-    DEBUG_PRINT(F(" currentStop="));
+    DEBUG_PRINT(F("s currentStop="));
     DEBUG_PRINT(currentStop_.index);
-    DEBUG_PRINT(F(" nextStop="));
-    DEBUG_PRINT(nextStop_.index);
+    DEBUG_PRINT(F(" desiredStop="));
+    DEBUG_PRINT(desiredStop_.index);
     DEBUG_PRINT(F(" currentPosition="));
     DEBUG_PRINT(currentPosition_);
-    DEBUG_PRINT(F(" interruptCount="));
-    DEBUG_PRINT(interruptCount_);
+    DEBUG_PRINT(F(" desiredPosition="));
+    DEBUG_PRINT(desiredStop_.endPosition - STOP_MARGIN);
+    DEBUG_PRINT(F(" loop="));
+    DEBUG_PRINT(loopCount_);
     DEBUG_PRINT(F("\n"));
     DEBUG_FLUSH();
 }
 
 #else
 
-#define DEBUG_RECORD_INTERRUPT() do {} while (false)
+#define DEBUG_LOOP_COUNT() do {} while (false)
+#define DEBUG_LOOP_COUNT_RESET() do {} while (false)
 #define DEBUG_REPORT(message) do {} while (false)
 
 #endif
 
 
 
-void handlePinInterrupt() {
-    DEBUG_RECORD_INTERRUPT();
-}
-
-void handleTick() {
-    ticked_ = true;
+void handleClockInterrupt() {
+    nextSecond_ = true;
 }
 
 void goToSleep() {
+    DEBUG_FLUSH();
+    // De-energize the slider potentiometer during sleep to save power
+    pinMode(CONFIG_PIN_SLIDER_GROUND, INPUT_PULLUP);
+    // The clock has some preparation to do before we go into a deep sleep mode
     clock::prepareForSleep();
+
     LowPower.powerSave(SLEEP_FOREVER, ADC_OFF, BOD_OFF, TIMER2_ON);
+
+    // Re-energize the slide potentiometer
+    pinMode(CONFIG_PIN_SLIDER_GROUND, OUTPUT);
+    digitalWrite(CONFIG_PIN_SLIDER_GROUND, LOW);
 }
 
-void shutdown() {
-    motor_.stop();
-    clock::pause();
+void updateStateFromAdc() {
+    int newPosition = adc::lastValue();
 
-    if (digitalRead(CONFIG_PIN_POWER) == LOW) {
-        DEBUG_PRINT(F("Can't fully power down, adjust resistor values\n"));
-        DEBUG_FLUSH();
-        LowPower.powerSave(SLEEP_1S, ADC_OFF, BOD_OFF, TIMER2_ON);
+    if (newPosition == currentPosition_) {
         return;
     }
 
-    DEBUG_PRINT(F("Powering down\n"));
-    DEBUG_FLUSH();
+    currentPosition_ = newPosition;
+    stop::Stop newStop = stop::byPosition(newPosition);
 
-    // Power down and wake up only if we get an interrupt from the power pin
-    attachInterrupt(digitalPinToInterrupt(CONFIG_PIN_POWER), handlePinInterrupt, LOW);
-    LowPower.powerDown(SLEEP_FOREVER, ADC_OFF, BOD_OFF);
+    if (newStop.index != currentStop_.index) {
+        currentStop_ = newStop;
 
-    // When turned on again, stop listening for interrupts on the power pin
-    detachInterrupt(digitalPinToInterrupt(CONFIG_PIN_POWER));
-    waitForCrystal();
+        if (newStop.index != desiredStop_.index) {
+            // Any stop that is neither the current stop nor the desired one (that is, the one the
+            // motor is currently trying to move the slider to) must have been the result of a human
+            // moving it. Update state accordingly.
+            desiredStop_ = newStop;
+
+            if (newStop.index == STOP_INDEX_ZERO) {
+                // Reset the bell parameters
+                ringCount_ = 0;
+                bellStopwatch_ = clock::stopwatch(0);
+            }
+
+            stopwatch_ = clock::stopwatch(newStop.seconds, true);
+            // When resetting the stopwatch, unset nextSecond_ since any unhandled interrupts are
+            // stale now.
+            nextSecond_ = false;
+            if (!motor_.isRunning()) {
+                DEBUG_REPORT(F("Stop set by human"));
+            }
+        }
+    }
 }
 
-bool updatePosition() {
-    if (!adc::isRunning()) {
-        int newPosition = adc::lastValue();
-
-        positionChange_ = abs(newPosition - currentPosition_);
-        currentPosition_ = newPosition;
-        return positionChange_ != 0;
+void runMotor() {
+    if (nextSecond_) {
+        // If a second passed, check if it's time to go to the next stop.
+        nextSecond_ = false;
+        checkStopwatch();
     }
 
-    return false;
+    int desiredPosition = desiredStop_.endPosition - STOP_MARGIN;
+
+    if (currentPosition_ >= desiredPosition) {
+        if (!motor_.isRunning()) {
+            DEBUG_REPORT(F("Motor start"));
+            motor_.start();
+        }
+    }
+    else if (motor_.isRunning()) {
+        motor_.stop();
+        DEBUG_REPORT(F("Motor stop"));
+    }
 }
 
-void updateMotor() {
-    if (currentPosition_ >= nextStop_.endPosition - STOP_MARGIN) {
-        // Normal movement to the next stop.
-        if (CONFIG_DEBUG && !motor_.isRunning()) {
-            DEBUG_REPORT(F("Motor start"));
+void ringBell() {
+    if (bellStopwatch_.remaining() > 0) {
+        return;
+    }
+
+    if (ringCount_ <= BELL_INTERVAL_COUNT) {
+        // Schedule the next ring (if there is one) before we sound this one so they aren't delayed
+        // by the time it takes to play the audio
+        if (ringCount_ < BELL_INTERVAL_COUNT) {
+            bellStopwatch_ = clock::stopwatch(pgm_read_byte(&(BELL_INTERVALS[ringCount_])));
         }
-        motor_.start();
+
+        DEBUG_PRINT(F("DING "));
+        DEBUG_PRINTLN(ringCount_);
+        DEBUG_FLUSH();
+        startPlayback(audio::DATA, audio::DATA_SIZE);
+
+        // Don't do anything else until the sound is done playing. Use idle mode so we can
+        // leave Timer0 and Timer1 running to output sound.
+        while (isPlaying()) {
+            LowPower.idle(SLEEP_FOREVER, ADC_OFF, TIMER2_ON, TIMER1_ON, TIMER0_ON,
+                            SPI_OFF, USART0_OFF, TWI_OFF);
+        }
+
+        ringCount_++;
     }
     else {
-        // We reached the stop!
-        motor_.stop();
-        currentStop_ = nextStop_;
-        DEBUG_REPORT(F("Motor stop"));
-        updateBell();
+        desiredStop_ = stop::STOP_OFF;
     }
-}
-
-void updateBell() {
-    bool shouldRing = currentStop_.index == STOP_INDEX_ZERO && ringCount_ <= BELL_INTERVAL_COUNT;
-
-    if (ringing_ && !shouldRing) {
-        // Set ringing_ to false only when the sound completes
-        ringing_ = isPlaying();
-
-        if (!ringing_) {
-            // If we reach the maximum number of rings, wait until the last ring sound has finished
-            // playing, then shut ourselves off. We only need to get the slider moving, the other
-            // logic will handle everything else.
-            if (ringCount_ >= BELL_INTERVAL_COUNT) {
-                nextStop_ = stop::STOP_OFF;
-                updateMotor();
-            }
-
-            // Reset the ring count for next time
-            ringCount_ = 0;
-        }
-    }
-    else if (shouldRing) {
-        if (!ringing_ || bellStopwatch_.remaining() == 0) {
-            DEBUG_PRINT(F("DING "));
-            DEBUG_PRINT(ringCount_);
-            DEBUG_PRINT(F("\n"));
-            DEBUG_FLUSH();
-            startPlayback(audio::DATA, audio::DATA_SIZE);
-
-            if (ringCount_ < BELL_INTERVAL_COUNT) {
-                bellStopwatch_ = clock::stopwatch(pgm_read_byte(&(BELL_INTERVALS[ringCount_])));
-            }
-            ringCount_++;
-        }
-        ringing_ = true;
-    }
-}
-
-void setStopFromPosition() {
-    currentStop_ = stop::byPosition(currentPosition_);
-    nextStop_ = currentStop_;
-
-    if (currentStop_.index != STOP_INDEX_OFF) {
-        stopwatch_ = clock::stopwatch(currentStop_.seconds, true);
-        // When resetting the stopwatch, unset ticked_ since any unhandled interrupts are useless
-        // now, anyway.
-        ticked_ = false;
-    }
-
-    DEBUG_REPORT(F("Stop set by human"));
-    setByHuman_ = true;
-    updateBell();
 }
 
 void checkStopwatch() {
     unsigned remaining = stopwatch_.remaining();
-    int index = nextStop_.index;
+    int index = desiredStop_.index;
 
     // Find the lowest stop with seconds greater than or equal to remaining
     while (index > STOP_INDEX_ZERO && stop::byIndex(index - 1).seconds >= remaining) {
         index--;
     }
 
-    if (index < nextStop_.index) {
+    if (index < desiredStop_.index) {
         DEBUG_PRINT(F("Tick "));
-        DEBUG_PRINT(nextStop_.index);
+        DEBUG_PRINT(desiredStop_.index);
         DEBUG_PRINT(F(" ("));
-        DEBUG_PRINT(nextStop_.seconds);
-        DEBUG_PRINT(F(") to "));
+        DEBUG_PRINT(desiredStop_.seconds);
+        DEBUG_PRINT(F("s) to "));
         DEBUG_PRINT(index);
         DEBUG_PRINT(F(" ("));
         DEBUG_PRINT(stop::byIndex(index).seconds);
-        DEBUG_PRINT(F(")"));
+        DEBUG_PRINT(F("s)"));
 
-        nextStop_ = stop::byIndex(index);
-        // The DEBUG_REPORT is here instead of the above block so nextStop is printed correctly
+        desiredStop_ = stop::byIndex(index);
+        // Call DEBUG_REPORT after updating desiredStop_
         DEBUG_REPORT(F(""));
-        updateMotor();
-    }
-    else if (setByHuman_ && nextStop_.seconds - remaining > 0) {
-        // Check if we should correct the position of the slider. Wait at least one second after
-        // the position was set manually so it hopefully happens after the person lets go.
-        setByHuman_ = false;
-        updateMotor();
     }
 }
 
@@ -224,67 +207,37 @@ void waitForCrystal() {
 }
 
 void setup() {
-    DEBUG_BEGIN(57600);
+    DEBUG_BEGIN(CONFIG_DEBUG_BAUD_RATE);
 
-    pinMode(CONFIG_PIN_POWER, INPUT_PULLUP);
+    // Disable the analog comparator to save power (we aren't using it)
+    ACSR = bit(ACD);
+
+    pinMode(CONFIG_PIN_SLIDER_GROUND, OUTPUT);
+    digitalWrite(CONFIG_PIN_SLIDER_GROUND, LOW);
 
     pinMode(CONFIG_PIN_SPEAKER, OUTPUT);
     digitalWrite(CONFIG_PIN_SPEAKER, LOW);
 
-    motor_.stop();
-    adc::setPin(CONFIG_PIN_SLIDER_IN);
+    pinMode(CONFIG_PIN_MOTOR_ENABLE, OUTPUT);
+    digitalWrite(CONFIG_PIN_MOTOR_ENABLE, LOW);
+
+    adc::init(CONFIG_PIN_SLIDER_IN);
     stop::createStops();
-    clock::attachInterrupt(handleTick);
+    clock::attachInterrupt(handleClockInterrupt);
 
     waitForCrystal();
-
-    currentPosition_ = adc::read();
-    setStopFromPosition();
 }
 
 void loop() {
-    while (isPlaying()) {
-        // Don't do anything but play the sound. Use idle mode so we can leave Timer0 and Timer1
-        // running to output sound.
-        LowPower.idle(SLEEP_FOREVER, ADC_OFF, TIMER2_ON, TIMER1_ON, TIMER0_ON,
-                      SPI_OFF, USART0_OFF, TWI_OFF);
-    }
-
-    adc::startAndSleep();
-
-    if (updatePosition()) {
-        if (motor_.isRunning()) {
-            // When the motor is moving, just keep going until we hit the desired position.
-            updateMotor();
-        }
-        else if (currentPosition_ < currentStop_.startPosition ||
-                 currentPosition_ >= currentStop_.endPosition)
-        {
-            // If the slider is at a different stop than it's supposed to be, a human must have
-            // moved it. Update the stop.
-            setStopFromPosition();
-        }
-    }
-
-    if (ticked_) {
-        // If the stopwatch ticked, check if it's time to go to the next stop.
-        ticked_ = false;
-        checkStopwatch();
-    }
-
-    if (ringing_) {
-        // When the bell is ringing, allow the sound effect to repeat until the state changes
-        updateBell();
-    }
+    DEBUG_LOOP_COUNT();
+    adc::read();
+    updateStateFromAdc();
+    runMotor();
 
     if (!motor_.isRunning()) {
-        // When the motor isn't running, enter low power operation. If the slider is in the off
-        // position, shutdown completely.
-        if (currentStop_.index == STOP_INDEX_OFF) {
-            shutdown();
+        if (currentStop_.index == STOP_INDEX_ZERO) {
+            ringBell();
         }
-        else {
-            goToSleep();
-        }
+        goToSleep();
     }
 }
