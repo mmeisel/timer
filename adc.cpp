@@ -2,6 +2,7 @@
 #include <LowPower.h>
 #include <util/atomic.h>
 #include "adc.h"
+#include "clock.h"
 
 
 
@@ -36,6 +37,7 @@ namespace adc {
 
             // If the processor wakes up before the reading is done, keep waiting.
             while (isRunning_) {
+                clock::prepareForSleep();
                 // ADC noise reduction mode starts the conversion automatically if the ADC is on.
                 LowPower.adcNoiseReduction(SLEEP_FOREVER, ADC_ON, TIMER2_ON);
             }
