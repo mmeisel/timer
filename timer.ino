@@ -96,17 +96,17 @@ void updateStateFromAdc() {
     if (newStop.index != currentStop_.index) {
         currentStop_ = newStop;
 
+        if (newStop.index == STOP_INDEX_ZERO) {
+            // Reset the bell parameters
+            ringCount_ = 0;
+            bellStopwatch_ = clock::stopwatch(0);
+        }
+
         if (newStop.index != desiredStop_.index) {
             // Any stop that is neither the current stop nor the desired one (that is, the one the
             // motor is currently trying to move the slider to) must have been the result of a human
             // moving it. Update state accordingly.
             desiredStop_ = newStop;
-
-            if (newStop.index == STOP_INDEX_ZERO) {
-                // Reset the bell parameters
-                ringCount_ = 0;
-                bellStopwatch_ = clock::stopwatch(0);
-            }
 
             stopwatch_ = clock::stopwatch(newStop.seconds, true);
             // When resetting the stopwatch, unset nextSecond_ since any unhandled interrupts are
