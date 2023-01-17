@@ -16,6 +16,7 @@ const int BELL_INTERVAL_COUNT = sizeof(BELL_INTERVALS) / sizeof(uint8_t);
 // Globals
 int currentPosition_ = ~0;
 bool setByHuman_ = false;
+unsigned setByHumanAt_ = 0;
 stop::Stop currentStop_;
 stop::Stop desiredStop_;
 clock::Stopwatch stopwatch_;
@@ -103,18 +104,24 @@ void updateStateFromAdc() {
         }
 
         if (newStop.index != desiredStop_.index) {
+            // Stop the motor so we have a chance to give feedback before moving again
+            if (motor_.isRunning()) {
+                motor_.stop();
+                DEBUG_REPORT(F("Motor interrupted"));
+            }
+
             // Any stop that is neither the current stop nor the desired one (that is, the one the
             // motor is currently trying to move the slider to) must have been the result of a human
             // moving it. Update state accordingly.
             desiredStop_ = newStop;
 
-            stopwatch_ = clock::stopwatch(newStop.seconds, true);
+            // Add CONFIG_FEEDBACK_DELAY_SECONDS so that the timer starts when the bell sounds
+            stopwatch_ = clock::stopwatch(newStop.seconds + CONFIG_FEEDBACK_DELAY_SECONDS, true);
             // When resetting the stopwatch, unset nextSecond_ since any unhandled interrupts are
             // stale now.
             nextSecond_ = false;
-            if (!motor_.isRunning()) {
-                DEBUG_REPORT(F("Stop set by human"));
-            }
+            setByHuman_ = true;
+            setByHumanAt_ = clock::time();
         }
     }
 }
@@ -126,9 +133,7 @@ void runMotor() {
         checkStopwatch();
     }
 
-    int desiredPosition = desiredStop_.endPosition - STOP_MARGIN;
-
-    if (currentPosition_ >= desiredPosition) {
+    if (currentPosition_ >= desiredStop_.endPosition - STOP_MARGIN) {
         if (!motor_.isRunning()) {
             DEBUG_REPORT(F("Motor start"));
             motor_.start();
@@ -137,6 +142,18 @@ void runMotor() {
     else if (motor_.isRunning()) {
         motor_.stop();
         DEBUG_REPORT(F("Motor stop"));
+    }
+}
+
+void playSound(unsigned char const *data, int length) {
+    DEBUG_FLUSH();
+    startPlayback(data, length);
+
+    // Don't do anything else until the sound is done playing. Use idle mode so we can leave
+    // Timer0 and Timer1 running to output sound.
+    while (isPlaying()) {
+        LowPower.idle(SLEEP_FOREVER, ADC_OFF, TIMER2_ON, TIMER1_ON, TIMER0_ON,
+                      SPI_OFF, USART0_OFF, TWI_OFF);
     }
 }
 
@@ -154,15 +171,7 @@ void ringBell() {
 
         DEBUG_PRINT(F("DING "));
         DEBUG_PRINTLN(ringCount_);
-        DEBUG_FLUSH();
-        startPlayback(audio::DATA, audio::DATA_SIZE);
-
-        // Don't do anything else until the sound is done playing. Use idle mode so we can
-        // leave Timer0 and Timer1 running to output sound.
-        while (isPlaying()) {
-            LowPower.idle(SLEEP_FOREVER, ADC_OFF, TIMER2_ON, TIMER1_ON, TIMER0_ON,
-                            SPI_OFF, USART0_OFF, TWI_OFF);
-        }
+        playSound(audio::DATA, audio::DATA_SIZE);
 
         ringCount_++;
     }
@@ -189,11 +198,9 @@ void checkStopwatch() {
         DEBUG_PRINT(index);
         DEBUG_PRINT(F(" ("));
         DEBUG_PRINT(stop::byIndex(index).seconds);
-        DEBUG_PRINT(F("s)"));
+        DEBUG_PRINTLN(F("s)"));
 
         desiredStop_ = stop::byIndex(index);
-        // Call DEBUG_REPORT after updating desiredStop_
-        DEBUG_REPORT(F(""));
     }
 }
 
@@ -230,6 +237,7 @@ void setup() {
 
 void loop() {
     DEBUG_LOOP_COUNT();
+    DEBUG_FLUSH();
     adc::read();
     updateStateFromAdc();
     runMotor();
@@ -237,6 +245,18 @@ void loop() {
     if (!motor_.isRunning()) {
         if (currentStop_.index == STOP_INDEX_ZERO) {
             ringBell();
+        }
+        else if (setByHuman_ && clock::time() >= setByHumanAt_ + CONFIG_FEEDBACK_DELAY_SECONDS) {
+            // Give feedback that the human set the time after they haven't touched the slider for
+            // CONFIG_FEEDBACK_DELAY_SECONDS.
+            setByHuman_ = false;
+
+            DEBUG_REPORT(F("Stop set by human"));
+
+            if (currentStop_.index != STOP_INDEX_OFF) {
+                // Play a little bit of audio to indicate the timer was set
+                playSound(audio::DATA + audio::DATA_SIZE / 2, audio::DATA_SIZE / 2);
+            }
         }
         goToSleep();
     }

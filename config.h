@@ -2,6 +2,10 @@
 #define __TIMER_CONFIG_H__
 
 #define CONFIG_DEBUG false
+#define CONFIG_DEBUG_BAUD_RATE 57600
+
+// How long to wait after a human sets the timer to give audible feedback and start counting
+#define CONFIG_FEEDBACK_DELAY_SECONDS 1
 
 // Pins
 #define CONFIG_PIN_MOTOR_ENABLE 5

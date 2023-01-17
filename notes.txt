@@ -179,3 +179,18 @@ than 11.7ms, but at least 488µs, then stop. Once we check the position, if it's
 repeat.
 
 With new setup, < 14µA both when off and when running but not ticking!
+
+------------------------
+1/7/2023
+
+I did some investigation into the amplifier -- I want to remove the pop and make sure it isn't
+shorting when first powered. This circuit is the simplest, basically what I have plus a resistor.
+It seems to work fine, just need to find the appropriate size of resistor, maybe using a
+potentiometer as they suggested:
+https://electronics.stackexchange.com/questions/387336/what-all-do-i-need-for-a-simple-speaker-circuit
+
+5 ohms seems to work well, and I'm not hearing a pop. I suspect the pop was due to too much current?
+
+Other options for the amplifier that I rejected:
+- https://siliconjunction.wordpress.com/2017/02/28/class-d-amplifier-for-the-arduino/
+- https://www.electronics-tutorials.ws/amplifier/mosfet-amplifier.html
