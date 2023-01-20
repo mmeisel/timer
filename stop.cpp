@@ -51,7 +51,7 @@ namespace stop {
         }
     }
 
-    Stop byIndex(int index) {
+    const Stop& byIndex(int index) {
         if (index == STOP_INDEX_OFF) {
             return STOP_OFF;
         }
@@ -65,7 +65,7 @@ namespace stop {
         return STOP_NOT_A_STOP;
     }
 
-    Stop byPosition(int position) {
+    const Stop& byPosition(int position) {
         if (position < 0 || position > 1023) {
             return STOP_NOT_A_STOP;
         }

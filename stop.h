@@ -2,7 +2,7 @@
 #define __TIMER_STOP_H__
 
 // These values are out of a maximum of 1024 positions (0 - 1023) to match the ADC output
-#define STOP_SIZE_OFF 64    // The absolute max here is 65 with the current resistor setup
+#define STOP_SIZE_OFF 64
 #define STOP_SIZE_NORMAL 24
 #define STOP_COUNT ((1024 - STOP_SIZE_OFF - STOP_SIZE_NORMAL) / STOP_SIZE_NORMAL)
 #define STOP_MARGIN 8
@@ -30,8 +30,8 @@ namespace stop {
     };
 
     void createStops();
-    Stop byIndex(int index);
-    Stop byPosition(int position);
+    const Stop& byIndex(int index);
+    const Stop& byPosition(int position);
 
     const Stop STOP_OFF(0, STOP_SIZE_OFF, 0, STOP_INDEX_OFF);
     const Stop STOP_ZERO(STOP_SIZE_OFF, STOP_SIZE_OFF + STOP_SIZE_NORMAL, 0, STOP_INDEX_ZERO);
