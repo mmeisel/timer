@@ -27,8 +27,9 @@ namespace adc {
         // Set the pin for the conversion (and the reference voltage to the default (VCC))
         ADMUX = bit(REFS0) | (pin_ & 0x07);
         // Enable ADC, enable ADC interrupt, and set prescaler. The default Uno setup is a 16
-        // MHz clock divided by 128. We are using an 8 MHz clock divided by 64.
-        ADCSRA = bit(ADEN) | bit(ADIE) | bit(ADPS2) | bit(ADPS1);
+        // MHz clock divided by 128. We are using an 8 MHz clock, but we still divide by 128 for the
+        // best possible accuracy.
+        ADCSRA = bit(ADEN) | bit(ADIE) | bit(ADPS2) | bit(ADPS1) | bit(ADPS0);
     }
 
     void read() {
