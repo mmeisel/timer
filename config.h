@@ -8,7 +8,7 @@
 #define CONFIG_FEEDBACK_DELAY_SECONDS 1
 
 // Pins
-#define CONFIG_PIN_MOTOR_ENABLE 5
+#define CONFIG_PIN_MOTOR_ENABLE 2
 #define CONFIG_PIN_SLIDER_IN A0
 #define CONFIG_PIN_SLIDER_GROUND 15
 // This would require code changes to use anything other than pin 6 (OC0A)
