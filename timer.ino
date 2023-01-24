@@ -17,8 +17,8 @@ const int BELL_INTERVAL_COUNT = sizeof(BELL_INTERVALS) / sizeof(uint8_t);
 int currentPosition_ = ~0;
 bool setByHuman_ = false;
 unsigned setByHumanAt_ = 0;
-stop::Stop currentStop_;
-stop::Stop desiredStop_;
+stop::Stop currentStop_ = stop::STOP_NOT_A_STOP;
+stop::Stop desiredStop_ = stop::STOP_NOT_A_STOP;
 clock::Stopwatch stopwatch_;
 
 Motor motor_(CONFIG_PIN_MOTOR_ENABLE);
@@ -85,54 +85,45 @@ void goToSleep() {
 }
 
 void updateStateFromAdc() {
-    int newPosition = adc::lastValue();
+    const int newPosition = adc::lastValue();
 
     if (newPosition == currentPosition_) {
         return;
     }
-
     currentPosition_ = newPosition;
-    stop::Stop newStop = stop::byPosition(newPosition);
 
-    if (newStop.index != currentStop_.index) {
-        currentStop_ = newStop;
+    const stop::Stop& newStop = stop::byPosition(newPosition);
 
-        if (newStop.index == STOP_INDEX_ZERO) {
-            // Reset the bell parameters
-            ringCount_ = 0;
-            bellStopwatch_ = clock::stopwatch(0);
-        }
-
-        if (newStop.index != desiredStop_.index) {
-            // Stop the motor so we have a chance to give feedback before moving again
-            if (motor_.isRunning()) {
-                motor_.stop();
-                DEBUG_REPORT(F("Motor interrupted"));
-            }
-
-            // Any stop that is neither the current stop nor the desired one (that is, the one the
-            // motor is currently trying to move the slider to) must have been the result of a human
-            // moving it. Update state accordingly.
-            desiredStop_ = newStop;
-
-            // Add CONFIG_FEEDBACK_DELAY_SECONDS so that the timer starts when the bell sounds
-            stopwatch_ = clock::stopwatch(newStop.seconds + CONFIG_FEEDBACK_DELAY_SECONDS, true);
-            // When resetting the stopwatch, unset nextSecond_ since any unhandled interrupts are
-            // stale now.
-            nextSecond_ = false;
-            setByHuman_ = true;
-            setByHumanAt_ = clock::time();
-        }
+    if (newStop.index == currentStop_.index) {
+        return;
     }
+    currentStop_ = newStop;
+
+    // If we just reached stop zero (where we ring the bell), reset the bell parameters
+    if (newStop.index == STOP_INDEX_ZERO) {
+        ringCount_ = 0;
+        bellStopwatch_ = clock::stopwatch(0);
+    }
+
+    // Ignore humans while the motor is running, this prevents the inherent jitter in repeated ADC
+    // measurements from being falsely interpreted as human intervention.
+    if (motor_.isRunning()) {
+        return;
+    }
+
+    // If the stop changes when the motor isn't running, it must have been the result of a human
+    // moving it. Update state accordingly.
+    desiredStop_ = newStop;
+
+    // Add CONFIG_FEEDBACK_DELAY_SECONDS so that the timer starts when the bell sounds
+    stopwatch_ = clock::stopwatch(newStop.seconds + CONFIG_FEEDBACK_DELAY_SECONDS, true);
+    // When resetting the stopwatch, unset nextSecond_ since any unhandled interrupts are stale now.
+    nextSecond_ = false;
+    setByHuman_ = true;
+    setByHumanAt_ = clock::time();
 }
 
 void runMotor() {
-    if (nextSecond_) {
-        // If a second passed, check if it's time to go to the next stop.
-        nextSecond_ = false;
-        checkStopwatch();
-    }
-
     if (currentPosition_ >= desiredStop_.endPosition - STOP_MARGIN) {
         if (!motor_.isRunning()) {
             DEBUG_REPORT(F("Motor start"));
@@ -181,7 +172,13 @@ void ringBell() {
 }
 
 void checkStopwatch() {
-    unsigned remaining = stopwatch_.remaining();
+    if (!nextSecond_) {
+        // If a second hasn't passed yet, nothing to do.
+        return;
+    }
+    nextSecond_ = false;
+
+    const unsigned remaining = stopwatch_.remaining();
     int index = desiredStop_.index;
 
     // Find the lowest stop with seconds greater than or equal to remaining
@@ -240,6 +237,7 @@ void loop() {
     DEBUG_FLUSH();
     adc::read();
     updateStateFromAdc();
+    checkStopwatch();
     runMotor();
 
     if (!motor_.isRunning()) {
@@ -250,7 +248,6 @@ void loop() {
             // Give feedback that the human set the time after they haven't touched the slider for
             // CONFIG_FEEDBACK_DELAY_SECONDS.
             setByHuman_ = false;
-
             DEBUG_REPORT(F("Stop set by human"));
 
             if (currentStop_.index != STOP_INDEX_OFF) {
